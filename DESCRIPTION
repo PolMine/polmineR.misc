@@ -1,0 +1,34 @@
+Package: polmineR.misc
+Type: Package
+Title: polmineR.misc
+Version: 0.1.1
+Date: 2016-07-18
+Author: Andreas Blaette
+Maintainer: Andreas Blaette <andreas.blaette@uni-due.de>
+Imports:
+    methods,
+    R6,
+    polmineR
+VignetteBuilder: knitr
+LazyData: yes
+Description: miscellaneaous extensions for the polmineR base package
+License: 
+Collate:
+    'polmineR.misc_package.R'
+    'Hitanalysis_class.R'
+    'as.dfm_method.R'
+    'as.svmlight_method.R'
+    'bughunt_method.R'
+    'ctm_method.R'
+    'duplicates_method.R'
+    'egoNetwork_method.R'
+    'hunspell_method.R'
+    'label_method.R'
+    'nchars_method.R'
+    'pAttribute_method.R'
+    'papply_function.R'
+    'similarity_method.R'
+    'store_method.R'
+    'validate_method.R'
+    'comparables_method.R'
+RoxygenNote: 5.0.1

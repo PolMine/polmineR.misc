@@ -1,8 +1,8 @@
 Package: polmineR.misc
 Type: Package
 Title: polmineR.misc
-Version: 0.1.1
-Date: 2016-07-18
+Version: 0.1.2
+Date: 2016-07-21
 Author: Andreas Blaette
 Maintainer: Andreas Blaette <andreas.blaette@uni-due.de>
 Imports:
@@ -31,4 +31,5 @@ Collate:
     'store_method.R'
     'validate_method.R'
     'comparables_method.R'
+    'binarize_method.R'
 RoxygenNote: 5.0.1

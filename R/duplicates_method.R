@@ -34,32 +34,39 @@ setGeneric("duplicates", function(.Object, ...) standardGeneric("duplicates"))
 #' }
 #' @exportMethod duplicates
 #' @rdname duplicates-method
-setMethod("duplicates", "partitionBundle", function(.Object, chars="[a-zA-Z]", pAttribute="word", sAttribute="text_date", sample=100, n=2, threshold=0.9, mc=FALSE, verbose=TRUE){
+setMethod("duplicates", "partitionBundle", function(.Object, chars="[a-zA-Z]", pAttribute="word", sAttribute="text_date", datePrep = NULL, sample=100, n=2, threshold=0.9, mc=FALSE, verbose=TRUE, progress = TRUE){
   if (verbose == TRUE) message("... counting characters")
   if (is.numeric(sample)){
     bundleSample <- sample(.Object, size=sample)
     charCount <- nchars(bundleSample, pAttribute=pAttribute, regexCharsToKeep=chars, toLower=TRUE, decreasing=FALSE, mc=FALSE)
     rm(bundleSample)
   } else {
-    charCount <- nchars(.Object, pAttribute, regexCharsToKeep=chars, toLower=TRUE, decreasing=FALSE, mc=FALSE)  
+    charCount <- nchars(.Object, pAttribute, regexCharsToKeep=chars, toLower=TRUE, decreasing=FALSE, mc=FALSE)
   }
   if (verbose == TRUE) message("... preparing ngram matrix")
-  ngramBundle <- ngrams(.Object, n=4, char=names(charCount[1:10]))
+  ngramBundle <- ngrams(.Object, n=4, char=names(charCount[1:10]), progress = progress)
   ngramDocumentMatrix <- as.TermDocumentMatrix(ngramBundle, col="count")
   ngramDocumentMatrixWeighed <- polmineR::weigh(ngramDocumentMatrix, method="tfidf")
   if (verbose == TRUE) message("... identifying comparables")
-  whatToCompareMatrix <- comparables(.Object, date=sAttribute, n=n)
+  whatToCompareMatrix <- comparables(.Object, date = sAttribute, n = n, datePrep = datePrep)
   if (verbose == TRUE) message("... calculating cosine similarity")
   similarityMatrix <- similarity(ngramDocumentMatrixWeighed, select=whatToCompareMatrix)
   if (verbose == TRUE) message("... preparing data.table")
-  duplicates <- getDuplicates(.Object, similarityMatrix=similarityMatrix, threshold=threshold, date=sAttribute, progress=TRUE)
+  duplicates <- getDuplicates(
+    .Object, similarityMatrix = similarityMatrix, threshold = threshold,
+    date=sAttribute, datePrep = datePrep, progress = TRUE
+    )
   duplicates
 })
 
 
 setGeneric("getDuplicates", function(.Object, ...) standardGeneric("getDuplicates"))
 
-setMethod("getDuplicates", "partitionBundle", function(.Object, similarityMatrix, threshold=0.9, date, mc=FALSE, progress=TRUE, verbose=TRUE){
+setMethod("getDuplicates", "partitionBundle", function(
+  .Object, similarityMatrix, threshold=0.9,
+  date,
+  mc=FALSE, progress=TRUE, verbose=TRUE
+  ){
   if (verbose == TRUE) message("... applying threshold")
   if (mc == FALSE) mc <- 1
   dates <- unlist(lapply(

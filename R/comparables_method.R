@@ -2,7 +2,7 @@
 setGeneric("comparables", function(.Object, ...) standardGeneric("comparables"))
 
 #' @noRd
-setMethod("comparables", "partitionBundle", function(.Object, dates=NULL, n=1, reduce=TRUE, verbose=FALSE, progress=TRUE, mc=FALSE){
+setMethod("comparables", "partitionBundle", function(.Object, dates = NULL, datePrep = NULL, n=1, reduce=TRUE, verbose=FALSE, progress=TRUE, mc=FALSE){
   if (!is.null(dates)){
     if (requireNamespace("chron", quietly=TRUE)){
       message("... chron-package required and loaded")
@@ -11,6 +11,7 @@ setMethod("comparables", "partitionBundle", function(.Object, dates=NULL, n=1, r
     }
     if (verbose == TRUE) message("... getting files to be compared")
     dates <- unlist(lapply(setNames(.Object@objects, names(.Object)), function(x) sAttributes(x, dates)))
+    if (!is.null(datePrep)) dates <- sapply(dates, datePrep)
     objectSplittedByDate <- split(c(1:length(.Object)), f=dates)
     .getWhatToCompare <- function(i){
       dateOfDoc <- as.POSIXct(unname(dates[i]))

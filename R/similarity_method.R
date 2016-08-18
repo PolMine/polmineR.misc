@@ -1,13 +1,21 @@
-setOldClass("simple_triplet_matrix")
+# setOldClass("simple_triplet_matrix")
 
 
 .cosine <- function(i, X, Y, ...){
-  a <- X[,Y$i[i]]
-  b <- X[,Y$j[i]]
+  a <- as.vector(X[,Y$i[i]])
+  b <- as.vector(X[,Y$j[i]])
   cProd <- crossprod(a) * crossprod(b)
   cProdSqrt <- sqrt(cProd)
   crossprod(a, b) / cProdSqrt
 }
+
+# .cosine2 <- function(i, X, Y, ...){
+#   proxy::simil(
+#     x = as.vector(X[,Y$i[i]]),
+#     y = as.vector(X[,Y$j[i]]),
+#     method = "cosine"
+#   )
+# }
 
 
 #' Calculate Jaccard Distance
@@ -40,24 +48,26 @@ setGeneric("similarity", function(.Object, ...) standardGeneric("similarity"))
 #' @exportMethod similarity
 #' @importFrom slam simple_triplet_matrix
 #' @importFrom proxy as.simil
-setMethod("similarity", "virtualMatrixClass", function(.Object, chunks = 1, select=NULL, method="cosine", progress=TRUE, verbose=TRUE, mc=FALSE){
+setMethod("similarity", "TermDocumentMatrix", function(.Object, chunks = 1, select=NULL, method="cosine", progress=TRUE, verbose=TRUE, mc=FALSE){
   if (chunks == 1){
     if (is.null(select)){
       combinations <- utils::combn(1:ncol(.Object), 2)
       select <- slam::simple_triplet_matrix(
         i = combinations[1,],
         j = combinations[2,],
-        v = rep(FALSE, times = ncol(combinations))
+        v = rep(FALSE, times = ncol(combinations)),
         dimnames = list(colnames(.Object), colnames(.Object))
         )
     }
     if (verbose) message("... calculating similarities")
+    
     cosineValues <- blapply(
       c(1:length(select$i)),
       f=.cosine,
       X=.Object, Y=select,
       mc=mc, progress=progress, select=select
     )
+    
     if (verbose) message("... preparing matrix to be returned")
     select$v <- unlist(cosineValues)
     return(proxy::as.simil(as.matrix(select)))

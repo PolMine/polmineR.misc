@@ -9,8 +9,9 @@
 duplicates(.Object, ...)
 
 \S4method{duplicates}{partitionBundle}(.Object, chars = "[a-zA-Z]",
-  pAttribute = "word", sAttribute = "text_date", sample = 100, n = 2,
-  threshold = 0.9, mc = FALSE, verbose = TRUE)
+  pAttribute = "word", sAttribute = "text_date", datePrep = NULL,
+  sample = 100, n = 2, threshold = 0.9, mc = FALSE, verbose = TRUE,
+  progress = TRUE)
 }
 \arguments{
 \item{.Object}{a \code{"partitionBundle"} object}

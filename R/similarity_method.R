@@ -1,21 +1,19 @@
-# setOldClass("simple_triplet_matrix")
-
-
-.cosine <- function(i, X, Y, ...){
+#' Calculate cosine Similarity
+#' 
+#' Calculate cosine similarity of two vectors.
+#' Note: For pairwise comparisons of vectors, this is much faster 
+#' than proxy::simil
+#' @param i integer index, the n-th position of the simple triplet matrix Y
+#' @param X matrix from which the values are taken
+#' @param Y simple triplet matrix
+#' @param ... further parameters (for use with blapply)
+cosine_similarity <- function(i, X, Y, ...){
   a <- as.vector(X[,Y$i[i]])
   b <- as.vector(X[,Y$j[i]])
   cProd <- crossprod(a) * crossprod(b)
   cProdSqrt <- sqrt(cProd)
   crossprod(a, b) / cProdSqrt
 }
-
-# .cosine2 <- function(i, X, Y, ...){
-#   proxy::simil(
-#     x = as.vector(X[,Y$i[i]]),
-#     y = as.vector(X[,Y$j[i]]),
-#     method = "cosine"
-#   )
-# }
 
 
 #' Calculate Jaccard Distance
@@ -35,8 +33,6 @@ jaccard_distance <- function(X){
 }
 
 
-setGeneric("similarity", function(.Object, ...) standardGeneric("similarity"))
-
 #' Similarity Calculations for Matrices
 #'
 #' @param .Object a simple_triplet_matrix
@@ -45,10 +41,11 @@ setGeneric("similarity", function(.Object, ...) standardGeneric("similarity"))
 #' @param progress logical
 #' @param verbose logical
 #' @param mc logical, or if numeric, providing number of cores
-#' @exportMethod similarity
+#' @export similarity
 #' @importFrom slam simple_triplet_matrix
 #' @importFrom proxy as.simil
-setMethod("similarity", "TermDocumentMatrix", function(.Object, chunks = 1, select=NULL, method="cosine", progress=TRUE, verbose=TRUE, mc=FALSE){
+similarity <- function(.Object, chunks = 1, select=NULL, method = "cosine", return.simil = TRUE, progress = TRUE, verbose = TRUE, mc = FALSE){
+  stopifnot(is(.Object)[1] %in% c("TermDocumentMatrix", "simple_triplet_matrix", "Matrix"))
   if (chunks == 1){
     if (is.null(select)){
       combinations <- utils::combn(1:ncol(.Object), 2)
@@ -63,14 +60,18 @@ setMethod("similarity", "TermDocumentMatrix", function(.Object, chunks = 1, sele
     
     cosineValues <- blapply(
       c(1:length(select$i)),
-      f=.cosine,
-      X=.Object, Y=select,
-      mc=mc, progress=progress, select=select
+      f = cosine_similarity,
+      X = .Object, Y = select,
+      mc = mc, progress = progress
     )
     
     if (verbose) message("... preparing matrix to be returned")
     select$v <- unlist(cosineValues)
-    return(proxy::as.simil(as.matrix(select)))
+    if (return.simil == TRUE){
+      return(proxy::as.simil(as.matrix(select)))  
+    } else {
+      return(select)
+    }
   } else if (chunks > 1){
     M <- blapply(
       .Object, f = proxy::simil,
@@ -79,5 +80,4 @@ setMethod("similarity", "TermDocumentMatrix", function(.Object, chunks = 1, sele
       )
     return(proxy::as.simil(M))
   }
-})
-
+}

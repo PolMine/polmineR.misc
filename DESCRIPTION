@@ -1,24 +1,27 @@
 Package: polmineR.misc
 Type: Package
 Title: polmineR.misc
-Version: 0.1.2
-Date: 2016-07-21
+Version: 0.1.3
+Date: 2016-08-18
 Author: Andreas Blaette
 Maintainer: Andreas Blaette <andreas.blaette@uni-due.de>
 Imports:
     methods,
     R6,
-    polmineR
+    polmineR,
+    rJava
 VignetteBuilder: knitr
 LazyData: yes
 Description: miscellaneaous extensions for the polmineR base package
 License: 
 Collate:
-    'polmineR.misc_package.R'
     'Hitanalysis_class.R'
     'as.dfm_method.R'
     'as.svmlight_method.R'
+    'polmineR.misc_package.R'
+    'binarize_method.R'
     'bughunt_method.R'
+    'comparables_method.R'
     'ctm_method.R'
     'duplicates_method.R'
     'egoNetwork_method.R'
@@ -30,6 +33,4 @@ Collate:
     'similarity_method.R'
     'store_method.R'
     'validate_method.R'
-    'comparables_method.R'
-    'binarize_method.R'
 RoxygenNote: 5.0.1

@@ -1,3 +1,6 @@
+#' @include polmineR.misc_package.R
+NULL
+
 #' Binarize Matrix
 #' 
 #' An input matrix (class matrix or simple_triplet_matrix) with numeric

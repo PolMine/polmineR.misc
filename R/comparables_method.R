@@ -1,8 +1,9 @@
 #' @noRd
 setGeneric("comparables", function(.Object, ...) standardGeneric("comparables"))
 
+#' @exportMethod comparables
 #' @noRd
-setMethod("comparables", "partitionBundle", function(.Object, dates = NULL, datePrep = NULL, n=1, reduce=TRUE, verbose=FALSE, progress=TRUE, mc=FALSE){
+setMethod("comparables", "partitionBundle", function(.Object, dates = NULL, datePrep = NULL, n = 1, reduce = TRUE, verbose = FALSE, progress = TRUE, mc = FALSE){
   if (!is.null(dates)){
     if (requireNamespace("chron", quietly=TRUE)){
       message("... chron-package required and loaded")

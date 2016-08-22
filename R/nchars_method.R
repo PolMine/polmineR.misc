@@ -23,7 +23,7 @@ setGeneric("nchars", function(x, ...) standardGeneric("nchars"))
 #' @param decreasing logical, passed into order call 
 #' @exportMethod nchars
 #' @rdname nchars
-setMethod("nchars", "partition", function(x, pAttribute="word", regexCharsToKeep="[a-zA-Z]", toLower=TRUE, decreasing=TRUE){
+setMethod("nchars", "partition", function(x, pAttribute="word", regexCharsToKeep="[a-zA-Z]", toLower=TRUE, decreasing=TRUE, ...){
   .Object <- x
   charSoup <- getTokenStream(.Object, pAttribute=pAttribute, collapse="")
   if ( toLower == TRUE ) charSoup <- tolower(charSoup)
@@ -35,17 +35,18 @@ setMethod("nchars", "partition", function(x, pAttribute="word", regexCharsToKeep
 })
 
 #' @rdname nchars
-setMethod("nchars", "partitionBundle", function(x, decreasing=TRUE, mc=FALSE, ...){
+setMethod("nchars", "partitionBundle", function(x, decreasing = TRUE, mc = FALSE, progress = TRUE, ...){
   .Object <- x
-  if (mc == FALSE){
-    partitionCount <- lapply(.Object@objects, function(x) nchars(x, ...))
-  } else {
-    partitionCount <- mclapply(
-      .Object@objects,
-      function(x) nchars(x, ...),
-      mc.cores=ifelse(mc == TRUE, getOption("polmineR.cores"))
-      )
-  }
+  partitionCount <- blapply(.Object@objects, f = nchars, mc = mc, progress = progress, ...)
+#   if (mc == FALSE){
+#     partitionCount <- lapply(.Object@objects, function(x) nchars(x, ...))
+#   } else {
+#     partitionCount <- mclapply(
+#       .Object@objects,
+#       function(x) nchars(x, ...),
+#       mc.cores=ifelse(mc == TRUE, getOption("polmineR.cores"))
+#       )
+#   }
   charCount <- tapply(
     unname(unlist(partitionCount)),
     INDEX=unlist(sapply(partitionCount, function(x) names(x))),

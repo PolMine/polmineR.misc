@@ -29,8 +29,10 @@
 #'  )
 #' doubled <- duplicates(foo)
 #' }
-#' @exportMethod duplicates
+#' @exportClass Duplicates
 #' @rdname duplicates-method
+#' @importFrom parallel mclapply
+#' @import data.table
 setRefClass(
   "Duplicates",
   fields = list(
@@ -44,14 +46,14 @@ setRefClass(
     sample = "integer",
     threshold = "numeric",
     duplicates = "data.table",
-    comparisons = "simple_triplet_matrix",
+    whatToCompare = "simple_triplet_matrix",
     similarityMatrix = "simple_triplet_matrix",
     ngramDocumentMatrix = "TermDocumentMatrix",
     datePrep = "function"
   ),
   
   methods = list(
-    initialize = function(chars="[a-zA-Z]", pAttribute="word", sAttribute="text_date", datePrep = NULL, sample = 1000L, n=2L, threshold=0.9){
+    initialize = function(chars="[a-zA-Z]", pAttribute="word", sAttribute="text_date", datePrep = NULL, sample = 1000L, n=1L, threshold=0.9){
       chars <<- chars
       sAttribute <<- sAttribute
       pAttribute <<- pAttribute
@@ -59,6 +61,105 @@ setRefClass(
       n <<- as.integer(n)
       threshold <<- threshold
       if (is.null(datePrep)) datePrep <<- function(x) x
+    },
+    
+    getWhatToCompare = function(x, reduce = TRUE, verbose = FALSE, progress = TRUE, mc = FALSE){
+      if (!is.null(.self$sAttribute)){
+        if (requireNamespace("chron", quietly=TRUE)){
+          message("... chron-package required and loaded")
+        } else {
+          stop("the 'chron'-package needs to be installed but is not available")
+        }
+        if (verbose == TRUE) message("... getting files to be compared")
+        dates <- unlist(lapply(setNames(x@objects, names(x)), function(y) sAttributes(y, .self$sAttribute)))
+        if (!is.null(.self$datePrep)) dates <- sapply(dates, .self$datePrep)
+        objectSplittedByDate <- split(c(1:length(x)), f = dates)
+        .getWhatToCompare <- function(i){
+          dateOfDoc <- try(as.POSIXct(unname(dates[i])))
+          if (is(dateOfDoc)[1] == "try-error") return(NULL)
+          dateRange <- chron::seq.dates(
+            from = strftime(dateOfDoc - 1 - (.self$n - 1) * 86400, format = "%m/%d/%Y"),
+            to = strftime(dateOfDoc + 1 + (.self$n - 1) * 86400, format = "%m/%d/%Y"),
+            by = "days", format = "%Y-%m-%d"
+          )
+          datesToGet <- sapply(c(1:length(dateRange)), function(j) {
+            as.character(strftime(dateRange[j], format="%Y-%m-%d"))
+          })
+          unlist(lapply(datesToGet, function(y) objectSplittedByDate[[y]]))
+        }
+        if (mc == FALSE){
+          docsToCompare <- lapply(c(1:length(x)), .getWhatToCompare)
+        } else {
+          docsToCompare <- parallel::mclapply(c(1:length(x)), .getWhatToCompare)
+        }
+        
+        docsToCompareMatrix <- simple_triplet_matrix(
+          i = unlist(docsToCompare),
+          j = unlist(lapply(c(1:length(docsToCompare)), function(i) rep(i, times=length(docsToCompare[[i]])))),
+          v = rep(NA, times=length(unlist(docsToCompare))),
+          ncol = length(x),
+          nrow = length(x),
+          dimnames = list(rows = names(x), columns = names(x))
+        )
+        if (reduce == TRUE){
+          keepOrDrop <- sapply(
+            c(1:length(docsToCompareMatrix$i)),
+            function(i) ifelse(docsToCompareMatrix$i[i] < docsToCompareMatrix$j[i], TRUE, FALSE)
+          )
+          for (x in c("i", "j", "v")) docsToCompareMatrix[[x]] <- docsToCompareMatrix[[x]][keepOrDrop]
+        }
+        return(docsToCompareMatrix)
+      } else {
+        stop("so far, getting comparables is only implemented based on dates")
+      }
+    },
+    
+    getDuplicates = function(x, mc = FALSE, progress = TRUE, verbose = TRUE){
+      if (verbose) message("... applying threshold")
+      if (mc == FALSE) mc <- 1
+      dates <- unlist(lapply(
+        setNames(x@objects, names(x)),
+        function(y) sAttributes(y, .self$sAttribute))
+      )
+      indexDuplicates <- which(.self$similarityMatrix$v >= .self$threshold)
+      if (length(indexDuplicates) > 0){
+        # keep only those values in similarity matrix that are above the threshold
+        for (what in c("i", "j", "v")) .self$similarityMatrix[[what]] <- .self$similarityMatrix[[what]][indexDuplicates]  
+        duplicateList <- lapply(
+          c(1:length(.self$similarityMatrix$i)),
+          function(i){
+            iName <- .self$similarityMatrix$dimnames[[1]][.self$similarityMatrix$i[i]]
+            jName <- .self$similarityMatrix$dimnames[[1]] [.self$similarityMatrix$j[i]]
+            iDate <- as.POSIXct(dates[[iName]])
+            iSize <- x@objects[[iName]]@size
+            jDate <- as.POSIXct(dates[[jName]])
+            jSize <- x@objects[[jName]]@size
+            value <- .self$similarityMatrix$v[i]
+            if(iDate == jDate){
+              if (iSize >= jSize){
+                return(c(name=iName, date=as.character(iDate), size=iSize, duplicate_name=jName, duplicate_date=as.character(jDate), duplicate_size=jSize, similarity=value))
+              } else {
+                return(c(name=jName, date=as.character(jDate), size=jSize, duplicate_name=iName, duplicate_date=as.character(iDate), duplicate_size=iSize, similarity=value))
+              }
+            } else if (iDate < jDate){
+              return(c(name=iName, date=as.character(iDate), size=iSize, duplicate_name=jName, duplicate_date=as.character(jDate), duplicate_size=jSize, similarity=value))
+            } else if (iDate > jDate){
+              return(c(name=jName, date=as.character(jDate), size=jSize, duplicate_name=iName, duplicate_date=as.character(iDate), duplicate_size=iSize, similarity=value))
+            }
+          })
+        duplicateDT <- data.table(do.call(rbind, duplicateList))
+        count <- function(y) return(y)
+        if (verbose) message("... x")
+        DT <- duplicateDT[, count(.N), by=.(name, date, size, duplicate_name, duplicate_date, duplicate_size, similarity)]
+        if (verbose) message("... xx")
+        DT[, V1 := NULL]
+        if (verbose) message("... xxx")
+        DT[, size := as.numeric(size)][, duplicate_size := as.numeric(duplicate_size)][, similarity := as.numeric(similarity)]
+        return(DT)
+      } else {
+        message("... no duplicates found")
+        return(NULL)
+      }
     },
     
     detectDuplicates = function(x, verbose = TRUE, mc = FALSE, progress = TRUE){
@@ -82,22 +183,25 @@ setRefClass(
       }
       charCount <<- setNames(as.numeric(nChars), names(nChars))
       if (verbose) message("... preparing ngram matrix")
-      ngramBundle <- ngrams(x, n = 4, char = names(.self$charCount[1:10]), progress = progress)
+      ngramBundle <- ngrams(x, n = 4, char = names(.self$charCount[1:10]), mc = mc, progress = progress)
       ngramDocumentMatrix <<- as.TermDocumentMatrix(ngramBundle, col="count")
       ngramDocumentMatrix <<- polmineR::weigh(.self$ngramDocumentMatrix, method="tfidf")
       if (verbose) message("... identifying comparables")
-      comparisons <<- comparables(.Object, date = sAttribute, n = n, datePrep = .self$datePrep, progress = progress)
+      whatToCompare <<- .self$getWhatToCompare(x = x, verbose = verbose, mc = mc, progress = progress)
       if (verbose) message("... calculating cosine similarity")
       similarityMatrix <<- similarity(
         .self$ngramDocumentMatrix,
-        select = .self$comparisons, return.simil = FALSE,
+        select = .self$whatToCompare, return.simil = FALSE,
         mc = mc, progress = progress)
       if (verbose) message("... preparing data.table")
       # here: If duplicates slot not empty, add rows
-      duplicates <<- getDuplicates(
-        x, similarityMatrix = .self$similarityMatrix, threshold = .self$threshold,
-        date = .self$sAttribute, progress = TRUE
-      )
+      newDuplicateDT <- .self$getDuplicates(x = x, mc = mc, verbose = verbose, progress = TRUE)
+      if (is.null(.self$duplicates)){
+        duplicates <<- newDuplicateDT
+      } else {
+        if (verbose) message("... data.table with duplicates alread present, appending new results")
+        .self$duplicates <- rbind(.self$duplicates, newDuplicateDT)
+      }
       if (verbose) message("FINISHED")
     },
     
@@ -121,10 +225,10 @@ setRefClass(
         function(x){
           indegree <- igraph::degree(x, mode = "in")
           original <- names(indegree)[which(indegree == 0)[1]]
-          duplicates <- names(indegree)[which(!names(indegree) %in% original)]
+          duplicated <- names(indegree)[which(!names(indegree) %in% original)]
           list(
-            original = rep(original, times = length(duplicates)),
-            duplicate = duplicates
+            original = rep(original, times = length(duplicated)),
+            duplicate = duplicated
           )
         }
       )
@@ -170,4 +274,3 @@ setRefClass(
   )
 )
 
-# dt <- readRDS("/home/blaette/Lab/tmp/duplicates_keywords_it.RData")

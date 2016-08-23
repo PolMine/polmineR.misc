@@ -5,7 +5,7 @@
 \title{Similarity Calculations for Matrices}
 \usage{
 similarity(.Object, chunks = 1, select = NULL, method = "cosine",
-  progress = TRUE, verbose = TRUE, mc = FALSE)
+  return.simil = TRUE, progress = TRUE, verbose = TRUE, mc = FALSE)
 }
 \arguments{
 \item{.Object}{a simple_triplet_matrix}

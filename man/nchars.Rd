@@ -10,9 +10,10 @@
 nchars(x, ...)
 
 \S4method{nchars}{partition}(x, pAttribute = "word",
-  regexCharsToKeep = "[a-zA-Z]", toLower = TRUE, decreasing = TRUE)
+  regexCharsToKeep = "[a-zA-Z]", toLower = TRUE, decreasing = TRUE, ...)
 
-\S4method{nchars}{partitionBundle}(x, decreasing = TRUE, mc = FALSE, ...)
+\S4method{nchars}{partitionBundle}(x, decreasing = TRUE, mc = FALSE,
+  progress = TRUE, ...)
 }
 \arguments{
 \item{...}{parameters that will be passed}

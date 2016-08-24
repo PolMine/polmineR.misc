@@ -6,7 +6,6 @@ setGeneric("store", function(object, ...) standardGeneric("store"))
 #' 
 #' @rdname as.mallet-method
 #' @importClassesFrom rJava jobjRef
-#' @import rJava
 setMethod("store", "jobjRef", function(object, filename=NULL){
   if (require("rJava", quietly=TRUE)){
     message("... rJava-package loaded")

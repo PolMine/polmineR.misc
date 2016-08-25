@@ -243,6 +243,7 @@ setRefClass(
       DUPL[, "duplicate" := !is.na(DUPL[["original"]])]
       DUPL[, "original" := sapply(DUPL[["original"]], function(x) ifelse(is.na(x), "", x))]
       setcolorder(DUPL, c("cpos_left", "cpos_right", sAttribute, "duplicate", "original"))
+      setorderv(DUPL, cols = "cpos_left")
       
       .as_cwb_encode_infile <- function(x, cols){
         M <- as.matrix(
@@ -252,7 +253,7 @@ setRefClass(
               function(col) as.character(x[[col]]))
             )
           )
-        paste(apply(M, 1, function(row) paste(row, collapse = "\t")), collapse = "\n", sep = "")
+        paste(paste(apply(M, 1, function(row) paste(row, collapse = "\t")), collapse = "\n", sep = ""), "\n", sep = "")
       }
       
       .makeEncodeCmd <- function(filename, attribute){
@@ -268,6 +269,7 @@ setRefClass(
         filename <- tempfile()
         cat(content, file = filename)
         cat(.makeEncodeCmd(filename, attribute = paste("text", what, sep="_")))
+        cat("\n")
       }
       
     }

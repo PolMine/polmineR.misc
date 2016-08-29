@@ -1,4 +1,10 @@
+#' Analyse hits
+#' 
+#' A story to be told.
+#' 
 #' @importFrom R6 R6Class
+#' @rdname Hitanalysis
+#' @aliases Hitanalysis
 Hitanalysis <- R6Class(
   
   "Hitanalysis",
@@ -18,6 +24,9 @@ Hitanalysis <- R6Class(
     },
     
     read = function(i, sAttribute=NULL, meta=NULL, highlight=NULL, type="plpr", cqp=TRUE){
+      
+      "documentation for the read method"
+      
       if (!is.null(sAttribute)){
         partitionToShow <- partition(
           self$hits@corpus,

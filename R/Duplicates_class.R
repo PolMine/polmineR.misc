@@ -1,24 +1,45 @@
-#' get duplicates
+#' Detect Duplicates
 #' 
-#' The method implements a procedure described by Fritz Kliche, Andre Blessing,
+#' Class for duplicate detection.
+#' 
+#' The class implements a procedure described by Fritz Kliche, Andre Blessing,
 #' Urlich Heid and Jonathan Sonntag in the paper "The eIdentity Text
 #' ExplorationWorkbench" presented at LREC 2014
 #' (see \url{http://www.lrec-conf.org/proceedings/lrec2014/pdf/332_Paper.pdf}).
 #' 
-#' The method calls the (internal) \code{"getDuplicates"}-method that will make choices as follows:
+#' To detect duplicates, choices are made as follows:
 #' (a) If two similar articles have been published on the same day, the shorter article will
 #' be considered the duplicate; (b) if two similar articles were published on different days,
 #' the article that appeared later will be considered the duplicate.
 #' 
-#' @param .Object a \code{"partitionBundle"} object
-#' @param chars a regex providing the characters to keep
+#' Different \code{partitionBundle}-objects can be passed into the \code{detectDuplicates}-method successively. The field
+#' \code{duplicates} will be appended by the duplicates that are newly detected. 
+#' 
+#' @section Fields:
+#' \describe{
+#' \item{\code{corpus}:}{the CWB corpus the (last) \code{partitionBundle} used describes}
+#' \item{\code{charRegex}:}{regex defining the characters to keep}
+#' \item{\code{charCount}:}{count of the characters in the \code{partitionBundle}}
+#' \item{\code{n}:}{number of days before and after a document was published}
+#' \item{\code{pAttribute}:}{the p-attribute used (defaults to "word")}
+#' \item{\code{sAttribute}:}{the s-attribute of the date of a text in the corpus}
+#' \item{\code{sample}:}{size of the sample of the \code{partitionBundle} that the character count is based on}
+#' \item{\code{threshold}:}{minimum similarity value to identify two texts as duplicates}
+#' \item{\code{whatToCompare}:}{a \code{simple_triplet_matrix} with the texts to be compared}
+#' \item{\code{similarityMatrix}:}{a \code{simple_triplet_matrix} with similarities of texts}
+#' \item{\code{ngramDocumentMatrix}:}{a matrix (inheriting from \code{TermDocumentMatrix}) with ngram counts in the documents of the \code{partitionBundle}}
+#' \item{\code{datePrep}:}{function to rework dates if not in the DD-MM-YYYY standard format}
+#' \item{\code{annotation}:}{\code{data.table} with corpus positions}
+#' }
+#' @param x a \code{"partitionBundle"} object defining the documents that will be compared to detect duplicates
+#' @param charRegex a regex defining the characters to keep
 #' @param sAttribute the s-attribute providing the date
-#' @param sample will be passed as param size into sample-method to achieve a subset of partitionBundle and make char count faster
+#' @param sample number of documents to define a subset of \code{partitionBundle} to speed up character count
 #' @param n number of days before and after a document was published
 #' @param threshold numeric (0 < x < 1), the minimum similarity to qualify two documents as duplicates
-#' @param mc whether to use multicore
+#' @param mc logical, whether to use multicore
 #' @param verbose logical, whether to be verbose
-#' @param ... further parameters (verbose, progress, mc) to be passed into functions
+#' @param progress logical, whether to show progress bar
 #' @examples 
 #' \dontrun{
 #' foo <- partitionBundle(
@@ -36,9 +57,8 @@
 setRefClass(
   "Duplicates",
   fields = list(
-    partitionBundle = "partitionBundle",
     corpus = "character",
-    chars = "character",
+    charRegex = "character",
     charCount = "numeric",
     n = "integer",
     pAttribute = "character",
@@ -49,12 +69,14 @@ setRefClass(
     whatToCompare = "simple_triplet_matrix",
     similarityMatrix = "simple_triplet_matrix",
     ngramDocumentMatrix = "TermDocumentMatrix",
-    datePrep = "function"
+    datePrep = "function",
+    annotation = "data.table"
   ),
   
   methods = list(
-    initialize = function(chars="[a-zA-Z]", pAttribute="word", sAttribute="text_date", datePrep = NULL, sample = 1000L, n=1L, threshold=0.9){
-      chars <<- chars
+    initialize = function(charRegex="[a-zA-Z]", pAttribute="word", sAttribute="text_date", datePrep = NULL, sample = 1000L, n=1L, threshold=0.9){
+      "Initialize object of class 'Duplicates'."
+      charRegex <<- charRegex
       sAttribute <<- sAttribute
       pAttribute <<- pAttribute
       sample <<- as.integer(sample)
@@ -64,6 +86,9 @@ setRefClass(
     },
     
     getWhatToCompare = function(x, reduce = TRUE, verbose = FALSE, progress = TRUE, mc = FALSE){
+      
+      "Identify documents that will be compared (based on date of documents)."
+      
       if (!is.null(.self$sAttribute)){
         if (requireNamespace("chron", quietly=TRUE)){
           message("... chron-package required and loaded")
@@ -114,7 +139,10 @@ setRefClass(
       }
     },
     
-    getDuplicates = function(x, mc = FALSE, progress = TRUE, verbose = TRUE){
+    makeDuplicateDataTable = function(x, mc = FALSE, progress = TRUE, verbose = TRUE){
+      
+      "Turn similarities of documents into a data.table that identifies original document and duplicate."
+      
       if (verbose) message("... applying threshold")
       if (mc == FALSE) mc <- 1
       dates <- unlist(lapply(
@@ -163,21 +191,23 @@ setRefClass(
     },
     
     detectDuplicates = function(x, verbose = TRUE, mc = FALSE, progress = TRUE){
-      partitionBundle <<- x
-      corpus <<- unique(sapply(.self$partitionBundle@objects, function(x) x@corpus))
+      
+      "Wrapper that implements the entire workflow for duplicate detection."
+      
+      corpus <<- unique(sapply(x@objects, function(x) x@corpus))
       stopifnot(length(.self$corpus) == 1)
       if (verbose == TRUE) message("... counting characters")
       if (is.numeric(.self$sample)){
         bundleSample <- sample(x, size = .self$sample)
         nChars <- nchars(
-          bundleSample, pAttribute = .self$pAttribute, regexCharsToKeep = .self$chars,
+          bundleSample, pAttribute = .self$pAttribute, regexCharsToKeep = .self$charRegex,
           toLower = TRUE, decreasing = FALSE,
           mc = FALSE, progress = progress
         )
         rm(bundleSample)
       } else {
         nChars <- nchars(
-          x, .self$pAttribute, regexCharsToKeep = .self$chars, toLower=TRUE, decreasing=FALSE,
+          x, .self$pAttribute, regexCharsToKeep = .self$charRegex, toLower=TRUE, decreasing=FALSE,
           mc=FALSE, progress = progress
         )
       }
@@ -195,7 +225,7 @@ setRefClass(
         mc = mc, progress = progress)
       if (verbose) message("... preparing data.table")
       # here: If duplicates slot not empty, add rows
-      newDuplicateDT <- .self$getDuplicates(x = x, mc = mc, verbose = verbose, progress = TRUE)
+      newDuplicateDT <- .self$makeDuplicateDataTable(x = x, mc = mc, verbose = verbose, progress = TRUE)
       if (is.null(.self$duplicates)){
         duplicates <<- newDuplicateDT
       } else {
@@ -205,17 +235,21 @@ setRefClass(
       if (verbose) message("FINISHED")
     },
     
-    addAnnotation = function(sAttribute){
-      sAttr <- sAttributes(corpus, sAttribute)
+    makeAnnotation = function(exec = FALSE){
+      
+      "Turn data.table with duplicates into file with corpus positions and annotation of duplicates,
+      generate cwb-s-encode command and execute it, if wanted."
+      
+      sAttr <- sAttributes(corpus, .self$sAttribute)
       cposList <- lapply(
         c(0:(length(sAttr) - 1)),
-        function(i) CQI$struc2cpos(corpus, sAttribute, i)
+        function(i) CQI$struc2cpos(corpus, .self$sAttribute, i)
         )
       cposMatrix <- do.call(rbind, cposList)
       colnames(cposMatrix) <- c("cpos_left", "cpos_right")
       cposDT <- data.table(cposMatrix)
-      cposDT[, sAttribute := sAttr, with = FALSE]
-      setkeyv(cposDT, sAttribute)
+      cposDT[, .self$sAttribute := sAttr, with = FALSE]
+      setkeyv(cposDT, .self$sAttribute)
       
       duplicates_df <- as.data.frame(.self$duplicates[, c("name", "duplicate_name"), with = FALSE])
       G <- igraph::graph_from_data_frame(duplicates_df)
@@ -238,13 +272,20 @@ setRefClass(
       )
       setkeyv(duplicatesDT, "duplicate")
       
-      DUPL <- duplicatesDT[cposDT]
-      setnames(DUPL, old = "duplicate", new = sAttribute)
-      DUPL[, "duplicate" := !is.na(DUPL[["original"]])]
-      DUPL[, "original" := sapply(DUPL[["original"]], function(x) ifelse(is.na(x), "", x))]
-      setcolorder(DUPL, c("cpos_left", "cpos_right", sAttribute, "duplicate", "original"))
-      setorderv(DUPL, cols = "cpos_left")
+      .self$annotation <- duplicatesDT[cposDT]
+      setnames(.self$annotation, old = "duplicate", new = .self$sAttribute)
+      .self$annotation[, "duplicate" := !is.na(.self$annotation[["original"]])]
+      .self$annotation[, "original" := sapply(.self$annotation[["original"]], function(x) ifelse(is.na(x), "", x))]
+      setcolorder(.self$annotation, c("cpos_left", "cpos_right", .self$sAttribute, "duplicate", "original"))
+      setorderv(.self$annotation, cols = "cpos_left")
+    },
+    
+    encode = function(exec = FALSE){
       
+      "Add structural attributes to CWB corpus based on the annotation data that has been generated
+      (data.table in field annotation)."
+      
+      # helper function 
       .as_cwb_encode_infile <- function(x, cols){
         M <- as.matrix(
           data.frame(
@@ -257,21 +298,26 @@ setRefClass(
       }
       
       .makeEncodeCmd <- function(filename, attribute){
-        paste(c(
-          "cwb-s-encode",
-          "-d", parseRegistry(corpus)[["HOME"]],
+        paste(
+          c(
+          "cwb-s-encode", "-d", parseRegistry(corpus)[["HOME"]],
           "-f", filename, "-V", attribute
-        ), collapse = " ")
+          ),
+          collapse = " ")
       }
       
       for (what in c("duplicate", "original")){
-        content <- .as_cwb_encode_infile(DUPL, cols = c("cpos_left", "cpos_right", what))  
+        content <- .as_cwb_encode_infile(.self$annotation, cols = c("cpos_left", "cpos_right", what))  
         filename <- tempfile()
         cat(content, file = filename)
-        cat(.makeEncodeCmd(filename, attribute = paste("text", what, sep="_")))
+        encodeCmd <- .makeEncodeCmd(
+          filename,
+          attribute = paste(strsplit(.self$sAttribute, "_")[[1]][1], what, sep="_")
+          )
+        cat(encodeCmd)
         cat("\n")
+        if (exec) system(encodeCmd)
       }
-      
     }
   )
 )

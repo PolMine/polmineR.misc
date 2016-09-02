@@ -9,17 +9,19 @@ Imports:
     methods,
     R6,
     polmineR,
-    rJava
+    rJava,
+    slam,
+    bigmemory
 VignetteBuilder: knitr
 LazyData: yes
 Description: miscellaneaous extensions for the polmineR base package
 License: 
 Collate:
+    'polmineR.misc_package.R'
     'Duplicates_class.R'
     'Hitanalysis_class.R'
     'as.dfm_method.R'
     'as.svmlight_method.R'
-    'polmineR.misc_package.R'
     'binarize_method.R'
     'bughunt_method.R'
     'ctm_method.R'
@@ -32,4 +34,5 @@ Collate:
     'similarity_method.R'
     'store_method.R'
     'validate_method.R'
+    'virtualMatrixClass.R'
 RoxygenNote: 5.0.1

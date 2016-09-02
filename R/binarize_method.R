@@ -9,16 +9,21 @@ NULL
 #' 
 #' @param .Object input object
 #' @param top an integer value, the n values with the highes values that will be TRUE
+#' @param reduce logical, whether to drop row labels of a simple_triplet_matrix with no TRUE value in the matrix
 #' @param verbose logical
 #' @rdname binarize
+#' @exportMethod binarize
 setGeneric("binarize", function(.Object, ...) standardGeneric("binarize"))
 
 
 #' @rdname binarize
-setMethod("binarize", "simple_triplet_matrix", function(.Object, top, verbose = TRUE){
+setMethod("binarize", "simple_triplet_matrix", function(.Object, top, reduce = TRUE, mc = FALSE, progress = TRUE, verbose = TRUE){
   vList <- split(.Object$v, .Object$j)
-  indices <- lapply(c(1:length(vList)), function(i) order(vList[[i]], decreasing = T)[1:top])
-  
+  indices <- blapply(
+    c(1:length(vList)),
+    function(i) order(vList[[i]], decreasing = T)[1:top],
+    mc = mc, progress = progress, verbose = FALSE
+    )
   iList <- split(.Object$i, .Object$j)
   iListBin <- lapply(c(1:length(iList)), function(i) iList[[i]][indices[[i]]])
   M <- slam::simple_triplet_matrix(
@@ -28,6 +33,17 @@ setMethod("binarize", "simple_triplet_matrix", function(.Object, top, verbose = 
     dimnames = dimnames(.Object),
     nrow = nrow(.Object), ncol = ncol(.Object)
   )
+  if (reduce == TRUE){
+    termsThatOccur <- unique(M$i)
+    newIndex <- setNames(c(1:length(termsThatOccur)), as.character(termsThatOccur))
+    M <- slam::simple_triplet_matrix(
+      i = newIndex[as.character(M$i)],
+      j = M$j, v = M$v,
+      dimnames = list(dimnames(M)[[1]][termsThatOccur], dimnames(M)[[2]]),
+      nrow = length(termsThatOccur), ncol = ncol(M)
+    )
+  }
+  M
 })
 
 

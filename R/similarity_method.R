@@ -16,21 +16,6 @@ cosine_similarity <- function(i, X, Y, ...){
 }
 
 
-#' Calculate Jaccard Distance
-#' 
-#' Fast way by using matrix multiplication.
-#' 
-#' http://stats.stackexchange.com/questions/49453/calculating-jaccard-or-other-association-coefficient-for-binary-data-using-matri
-#' @param X input matrix
-#' @export
-jaccard_distance <- function(X){
-  Xint <- matrix(as.integer(X), ncol = ncol(X))
-  NOT <- matrix(as.integer(!(X)), ncol=ncol(X))
-  A <- crossprod(Xint)
-  D <- crossprod(NOT)
-  Jsimil <- A / (nrow(X) - D)
-  proxy::pr_simil2dist(Jsimil)
-}
 
 
 #' Similarity Calculations for Matrices

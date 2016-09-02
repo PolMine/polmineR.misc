@@ -1,3 +1,6 @@
+#' @include polmineR.misc_package.R
+NULL
+
 #' Detect Duplicates
 #' 
 #' Class for duplicate detection.

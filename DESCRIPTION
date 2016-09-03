@@ -1,7 +1,7 @@
 Package: polmineR.misc
 Type: Package
 Title: polmineR.misc
-Version: 0.1.4
+Version: 0.1.5
 Date: 2016-08-22
 Author: Andreas Blaette
 Maintainer: Andreas Blaette <andreas.blaette@uni-due.de>
@@ -25,6 +25,7 @@ Collate:
     'binarize_method.R'
     'bughunt_method.R'
     'ctm_method.R'
+    'distance_method.R'
     'egoNetwork_method.R'
     'hunspell_method.R'
     'label_method.R'

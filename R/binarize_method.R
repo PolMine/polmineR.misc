@@ -19,13 +19,16 @@ setGeneric("binarize", function(.Object, ...) standardGeneric("binarize"))
 #' @rdname binarize
 setMethod("binarize", "simple_triplet_matrix", function(.Object, top, reduce = TRUE, mc = FALSE, progress = TRUE, verbose = TRUE){
   vList <- split(.Object$v, .Object$j)
+  if (verbose) message("... creating indices")
   indices <- blapply(
     c(1:length(vList)),
-    function(i) order(vList[[i]], decreasing = T)[1:top],
+    function(i, ...) order(vList[[i]], decreasing = T)[1:top],
     mc = mc, progress = progress, verbose = FALSE
     )
+  if (verbose) message("... applying indices")
   iList <- split(.Object$i, .Object$j)
   iListBin <- lapply(c(1:length(iList)), function(i) iList[[i]][indices[[i]]])
+  if (verbose) message("... preparing simple_triplet_matrix")
   M <- slam::simple_triplet_matrix(
     i = unlist(iListBin),
     j = unlist(lapply(1:ncol(.Object), function(i) rep(i, times=top))),
@@ -34,6 +37,7 @@ setMethod("binarize", "simple_triplet_matrix", function(.Object, top, reduce = T
     nrow = nrow(.Object), ncol = ncol(.Object)
   )
   if (reduce == TRUE){
+    if (verbose) message("... dropping column labels not used")
     termsThatOccur <- unique(M$i)
     newIndex <- setNames(c(1:length(termsThatOccur)), as.character(termsThatOccur))
     M <- slam::simple_triplet_matrix(

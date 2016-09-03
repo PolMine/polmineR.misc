@@ -152,6 +152,7 @@ setRefClass(
         setNames(x@objects, names(x)),
         function(y) sAttributes(y, .self$sAttribute))
       )
+      dates <- sapply(dates, .self$datePrep)
       indexDuplicates <- which(.self$similarityMatrix$v >= .self$threshold)
       if (length(indexDuplicates) > 0){
         # keep only those values in similarity matrix that are above the threshold
@@ -180,11 +181,8 @@ setRefClass(
           })
         duplicateDT <- data.table(do.call(rbind, duplicateList))
         count <- function(y) return(y)
-        if (verbose) message("... x")
         DT <- duplicateDT[, count(.N), by=.(name, date, size, duplicate_name, duplicate_date, duplicate_size, similarity)]
-        if (verbose) message("... xx")
         DT[, V1 := NULL]
-        if (verbose) message("... xxx")
         DT[, size := as.numeric(size)][, duplicate_size := as.numeric(duplicate_size)][, similarity := as.numeric(similarity)]
         return(DT)
       } else {
@@ -238,21 +236,21 @@ setRefClass(
       if (verbose) message("FINISHED")
     },
     
-    makeAnnotation = function(exec = FALSE){
+    makeAnnotation = function(sAttributeID){
       
       "Turn data.table with duplicates into file with corpus positions and annotation of duplicates,
       generate cwb-s-encode command and execute it, if wanted."
       
-      sAttr <- sAttributes(corpus, .self$sAttribute)
+      sAttr <- sAttributes(.self$corpus, sAttributeID, unique = FALSE)
       cposList <- lapply(
         c(0:(length(sAttr) - 1)),
-        function(i) CQI$struc2cpos(corpus, .self$sAttribute, i)
+        function(i) CQI$struc2cpos(.self$corpus, sAttributeID, i)
         )
       cposMatrix <- do.call(rbind, cposList)
       colnames(cposMatrix) <- c("cpos_left", "cpos_right")
       cposDT <- data.table(cposMatrix)
-      cposDT[, .self$sAttribute := sAttr, with = FALSE]
-      setkeyv(cposDT, .self$sAttribute)
+      cposDT[, sAttributeID := sAttr, with = FALSE]
+      setkeyv(cposDT, sAttributeID)
       
       duplicates_df <- as.data.frame(.self$duplicates[, c("name", "duplicate_name"), with = FALSE])
       G <- igraph::graph_from_data_frame(duplicates_df)
@@ -283,7 +281,7 @@ setRefClass(
       setorderv(.self$annotation, cols = "cpos_left")
     },
     
-    encode = function(exec = FALSE){
+    encode = function(exec = FALSE, filenames = list(duplicate = tempfile(), original = tempfile())){
       
       "Add structural attributes to CWB corpus based on the annotation data that has been generated
       (data.table in field annotation)."
@@ -311,10 +309,9 @@ setRefClass(
       
       for (what in c("duplicate", "original")){
         content <- .as_cwb_encode_infile(.self$annotation, cols = c("cpos_left", "cpos_right", what))  
-        filename <- tempfile()
-        cat(content, file = filename)
+        cat(content, file = filenames[[what]])
         encodeCmd <- .makeEncodeCmd(
-          filename,
+          filenames[[what]],
           attribute = paste(strsplit(.self$sAttribute, "_")[[1]][1], what, sep="_")
           )
         cat(encodeCmd)

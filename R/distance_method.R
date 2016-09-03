@@ -12,8 +12,7 @@ setGeneric("distance", function(x, ...) standardGeneric("distance"))
 setMethod("distance", "matrix", function(x, method = "jaccard", verbose = TRUE){
   stopifnot(method %in% c("jaccard"))
   if (method == "jaccard"){
-    stopifnot(is.logical(x))
-    x <- matrix(as.integer(x), ncol = ncol(x))
+    if (is.logical(x)) x <- matrix(as.integer(x), ncol = ncol(x))
     NOT <- matrix(as.integer(!x), ncol = ncol(x))
     if (verbose) message("... crossproduct for matrix")
     A <- crossprod(x)
@@ -21,11 +20,15 @@ setMethod("distance", "matrix", function(x, method = "jaccard", verbose = TRUE){
     D <- crossprod(NOT)
     if (verbose) message("... division")
     Jsimil <- A / (nrow(x) - D)
-    return(proxy::pr_simil2dist(Jsimil))
+    distMatrix <- proxy::pr_simil2dist(Jsimil)
+    retval <- as.dist(distMatrix)
+    names(retval) <- colnames(x)
+    return(retval)
   }
 })
 
 #' @rdname distance
-setMethod("distance", "simple_triplet_matrix", function(x){
-  distance(as.matrix(x))
+setMethod("distance", "simple_triplet_matrix", function(x, method = "jaccard", verbose = TRUE){
+  if (verbose) x <- as.matrix(x)
+  distance(x, method = method, verbose = verbose)
 })

@@ -29,7 +29,7 @@ cosine_similarity <- function(i, X, Y, ...){
 #' @export similarity
 #' @importFrom slam simple_triplet_matrix
 #' @importFrom proxy as.simil
-similarity <- function(.Object, chunks = 1, select=NULL, method = "cosine", return.simil = TRUE, progress = TRUE, verbose = TRUE, mc = FALSE){
+similarity <- function(.Object, chunks = 1, select = NULL, method = "cosine", return.simil = TRUE, progress = TRUE, verbose = TRUE, mc = FALSE){
   stopifnot(is(.Object)[1] %in% c("TermDocumentMatrix", "simple_triplet_matrix", "Matrix"))
   if (chunks == 1){
     if (is.null(select)){

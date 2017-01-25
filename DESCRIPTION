@@ -32,6 +32,7 @@ Collate:
     'nchars_method.R'
     'pAttribute_method.R'
     'papply_function.R'
+    'selectLabel_function.R'
     'similarity_method.R'
     'store_method.R'
     'validate_method.R'

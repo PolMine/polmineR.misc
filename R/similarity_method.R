@@ -1,13 +1,15 @@
-setGeneric("cosine_similarity", function(.Object ) standardGeneric("cosine_similarity"))
-
-#' Calculate cosine Similarity
+#' Calculate cosine similarity.
 #' 
 #' Calculate cosine similarity of two vectors.
 #' Note: Much faster for pairwise comparisons than proxy::simil.
 #' @param i integer index, the n-th position of the simple triplet matrix Y
 #' @param X matrix from which the values are taken
 #' @param Y simple triplet matrix
+#' @param tool 
 #' @param ... further parameters (for use with blapply)
+#' 
+setGeneric("cosine_similarity", function(.Object, ...) standardGeneric("cosine_similarity"))
+
 setMethod("cosine_similarity", "numeric", function(.Object, X, Y, ...){
   a <- as.vector(X[,Y$i[.Object]])
   b <- as.vector(X[,Y$j[.Object]])
@@ -59,7 +61,7 @@ setMethod("cosine_similarity", "simple_triplet_matrix", function(.Object, chunks
   }
 })
 
-setMethod("cosine_similarity", "matrix", function(.Object, tool = "proxy", chunks = 1, progress = TRUE, verbose = TRUE, mc = FALSE){
+setMethod("cosine_similarity", "matrix", function(.Object, tool = c("proxy", "coop", "handmade"), chunks = 1, progress = TRUE, verbose = TRUE, mc = FALSE){
   if (tool == "proxy"){
     if (chunks > 1){
       M <- blapply(
@@ -70,8 +72,6 @@ setMethod("cosine_similarity", "matrix", function(.Object, tool = "proxy", chunk
     } else {
       M <- proxy::simil(.Object, method = "cosine", by_rows = TRUE)
     }
-  } else if (tool == ""){
-    
   } else if (tool == "coop"){
     M <- coop::cosine(t(.Object))
   } else if (tool == "handmade"){

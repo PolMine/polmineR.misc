@@ -2,10 +2,10 @@
 % Please edit documentation in R/virtualMatrixClass.R
 \docType{methods}
 \name{virtualMatrixClass}
-\alias{blapply,virtualMatrixClass-method}
-\alias{simple_triplet_matrix-class}
 \alias{virtualMatrixClass}
+\alias{simple_triplet_matrix-class}
 \alias{virtualMatrixClass-class}
+\alias{blapply,virtualMatrixClass-method}
 \title{virtualMatrixClass}
 \usage{
 \S4method{blapply}{virtualMatrixClass}(x, f, chunks = 2,
@@ -21,4 +21,3 @@
 This is a virtual class to make it possible do define methods with uniform 
 behavior for the classes of the virtualMatrixClass.
 }
-

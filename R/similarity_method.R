@@ -9,7 +9,7 @@
 #' @param progress logical
 #' @param verbose logical
 #' @param mc logical, or if numeric, providing number of cores
-#' @export similarity
+#' @export cosine_similarity
 #' @importFrom slam simple_triplet_matrix
 #' @importFrom proxy as.simil
 #' @param ... further parameters (for use with blapply)
@@ -25,7 +25,7 @@ setMethod("cosine_similarity", "numeric", function(x, y){
 })
 
 #' @rdname cosine_similarity
-setMethod("cosine_similarity", "simple_triplet_matrix", function(x, y = NULL, progress = TRUE, verbose = TRUE, mc = FALSE){
+setMethod("cosine_similarity", "TermDocumentMatrix", function(x, y = NULL, progress = TRUE, verbose = TRUE, mc = FALSE){
 
   if (is.null(y)){
     combinations <- utils::combn(1:ncol(x), 2)
@@ -43,7 +43,6 @@ setMethod("cosine_similarity", "simple_triplet_matrix", function(x, y = NULL, pr
     c(1:length(y$i)),
     FUN = function(i) cosine_similarity(as.vector(x[, y$i[i]]), as.vector(x[, y$j[i]])),
     cl = mc
-    }
   )
 
   if (verbose) message("... preparing matrix to be returned")
@@ -51,6 +50,8 @@ setMethod("cosine_similarity", "simple_triplet_matrix", function(x, y = NULL, pr
   y$v <- unlist(cosine_values)
   y
 })
+
+# setMethod("cosine_similarity", "TermDocumentMatrix", function(x, ...) callNextMethod())
 
 setMethod("cosine_similarity", "matrix", function(x, how = c("proxy", "coop", "algebra"), chunks = 1, progress = TRUE, verbose = TRUE, mc = FALSE){
   stopifnot(how %in% c("proxy", "coop", "algebra"))

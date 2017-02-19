@@ -1,8 +1,8 @@
 Package: polmineR.misc
 Type: Package
 Title: polmineR.misc
-Version: 0.1.5
-Date: 2016-08-22
+Version: 0.1.6
+Date: 2017-02-19
 Author: Andreas Blaette
 Maintainer: Andreas Blaette <andreas.blaette@uni-due.de>
 Imports:
@@ -37,4 +37,4 @@ Collate:
     'store_method.R'
     'validate_method.R'
     'virtualMatrixClass.R'
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1

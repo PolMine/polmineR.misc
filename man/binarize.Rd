@@ -3,8 +3,8 @@
 \docType{methods}
 \name{binarize}
 \alias{binarize}
-\alias{binarize,matrix-method}
 \alias{binarize,simple_triplet_matrix-method}
+\alias{binarize,matrix-method}
 \title{Binarize Matrix}
 \usage{
 binarize(.Object, ...)
@@ -28,4 +28,3 @@ An input matrix (class matrix or simple_triplet_matrix) with numeric
 values will be turned into a binary (logical) matrix. The top values
 of each column will be assigned TRUE values.
 }
-

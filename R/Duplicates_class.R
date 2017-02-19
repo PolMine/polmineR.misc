@@ -1,6 +1,7 @@
 #' @include polmineR.misc_package.R
 NULL
 
+
 #' Detect Duplicates
 #' 
 #' Class for duplicate detection.
@@ -47,18 +48,21 @@ NULL
 #' \dontrun{
 #' foo <- partitionBundle(
 #'   "KEYWORDS",
-#'   def=list(text_newspaper="guardian"),
+#'   def = list(text_newspaper="guardian"),
 #'   var=list(text_id=sAttributes("KEYWORDS", "text_id")[1:500]),
 #'   pAttribute=NULL
 #'  )
 #' doubled <- duplicates(foo)
 #' }
+#' @export Duplicates
 #' @exportClass Duplicates
-#' @rdname duplicates-method
+#' @rdname Duplicates
 #' @importFrom parallel mclapply
 #' @import data.table
-setRefClass(
+Duplicates <- setRefClass(
+  
   "Duplicates",
+  
   fields = list(
     corpus = "character",
     charRegex = "character",
@@ -77,7 +81,7 @@ setRefClass(
   ),
   
   methods = list(
-    initialize = function(charRegex="[a-zA-Z]", pAttribute="word", sAttribute="text_date", datePrep = NULL, sample = 1000L, n=1L, threshold=0.9){
+    initialize = function(charRegex = "[a-zA-Z]", pAttribute = "word", sAttribute = "text_date", datePrep = NULL, sample = 1000L, n = 1L, threshold = 0.9){
       "Initialize object of class 'Duplicates'."
       charRegex <<- charRegex
       sAttribute <<- sAttribute
@@ -195,7 +199,7 @@ setRefClass(
       
       "Wrapper that implements the entire workflow for duplicate detection."
       
-      corpus <<- unique(sapply(x@objects, function(x) x@corpus))
+      .self$corpus <- unique(sapply(x@objects, function(x) x@corpus))
       stopifnot(length(.self$corpus) == 1)
       if (verbose == TRUE) message("... counting characters")
       if (is.numeric(.self$sample)){
@@ -212,23 +216,23 @@ setRefClass(
           mc=FALSE, progress = progress
         )
       }
-      charCount <<- setNames(as.numeric(nChars), names(nChars))
+      .self$charCount <- setNames(as.numeric(nChars), names(nChars))
       if (verbose) message("... preparing ngram matrix")
       ngramBundle <- ngrams(x, n = 4, char = names(.self$charCount[1:10]), mc = mc, progress = progress)
-      ngramDocumentMatrix <<- as.TermDocumentMatrix(ngramBundle, col="count")
-      ngramDocumentMatrix <<- polmineR::weigh(.self$ngramDocumentMatrix, method="tfidf")
+      .self$ngramDocumentMatrix <- as.TermDocumentMatrix(ngramBundle, col = "count")
+      .self$ngramDocumentMatrix <- polmineR::weigh(.self$ngramDocumentMatrix, method = "tfidf")
       if (verbose) message("... identifying comparables")
-      whatToCompare <<- .self$getWhatToCompare(x = x, verbose = verbose, mc = mc, progress = progress)
+      .self$whatToCompare <- .self$getWhatToCompare(x = x, verbose = verbose, mc = mc, progress = progress)
       if (verbose) message("... calculating cosine similarity")
-      similarityMatrix <<- cosine_similarity(
-        .self$ngramDocumentMatrix,
-        select = .self$whatToCompare, return.simil = FALSE,
-        mc = mc, progress = progress)
+      .self$similarityMatrix <- cosine_similarity(
+        x = .self$ngramDocumentMatrix, y = .self$whatToCompare,
+        mc = mc, progress = progress
+        )
       if (verbose) message("... preparing data.table")
       # here: If duplicates slot not empty, add rows
       newDuplicateDT <- .self$makeDuplicateDataTable(x = x, mc = mc, verbose = verbose, progress = TRUE)
       if (is.null(.self$duplicates)){
-        duplicates <<- newDuplicateDT
+        .self$duplicates <- newDuplicateDT
       } else {
         if (verbose) message("... data.table with duplicates alread present, appending new results")
         .self$duplicates <- rbind(.self$duplicates, newDuplicateDT)

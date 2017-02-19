@@ -220,7 +220,7 @@ setRefClass(
       if (verbose) message("... identifying comparables")
       whatToCompare <<- .self$getWhatToCompare(x = x, verbose = verbose, mc = mc, progress = progress)
       if (verbose) message("... calculating cosine similarity")
-      similarityMatrix <<- similarity(
+      similarityMatrix <<- cosine_similarity(
         .self$ngramDocumentMatrix,
         select = .self$whatToCompare, return.simil = FALSE,
         mc = mc, progress = progress)

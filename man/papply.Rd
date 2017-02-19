@@ -20,3 +20,4 @@ papply(index, f, verbose = FALSE, mc = TRUE, param = list())
 \description{
 mclapply with progress
 }
+

@@ -26,3 +26,4 @@ object of class \code{dist}
 Accelerated way using matrix multiplication for jaccard distance computation.
 http://stats.stackexchange.com/questions/49453/calculating-jaccard-or-other-association-coefficient-for-binary-data-using-matri
 }
+

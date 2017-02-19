@@ -36,3 +36,4 @@ speechesSample <- sample(speeches, 25)
 df <- label(speechesSample, logfile="/Users/blaette/Lab/tmp/foo.csv")
 } 
 }
+

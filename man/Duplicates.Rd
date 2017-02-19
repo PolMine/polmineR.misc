@@ -2,8 +2,8 @@
 % Please edit documentation in R/Duplicates_class.R
 \docType{class}
 \name{Duplicates-class}
-\alias{Duplicates-class}
 \alias{Duplicates}
+\alias{Duplicates-class}
 \title{Detect Duplicates}
 \arguments{
 \item{x}{a \code{"partitionBundle"} object defining the documents that will be compared to detect duplicates}
@@ -62,7 +62,6 @@ generate cwb-s-encode command and execute it, if wanted.}
 
 \item{\code{makeDuplicateDataTable(x, mc = FALSE, progress = TRUE, verbose = TRUE)}}{Turn similarities of documents into a data.table that identifies original document and duplicate.}
 }}
-
 \section{Fields}{
 
 \describe{
@@ -81,7 +80,6 @@ generate cwb-s-encode command and execute it, if wanted.}
 \item{\code{annotation}:}{\code{data.table} with corpus positions}
 }
 }
-
 \examples{
 \dontrun{
 foo <- partitionBundle(
@@ -93,3 +91,4 @@ foo <- partitionBundle(
 doubled <- duplicates(foo)
 }
 }
+

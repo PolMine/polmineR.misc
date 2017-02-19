@@ -2,8 +2,8 @@
 % Please edit documentation in R/egoNetwork_method.R
 \docType{methods}
 \name{egoNetwork,partition-method}
-\alias{egoNetwork,partition-method}
 \alias{egoNetwork}
+\alias{egoNetwork,partition-method}
 \title{Prepare data for an ego-network}
 \usage{
 \S4method{egoNetwork}{partition}(object, node, degrees,
@@ -49,3 +49,4 @@ package low.
 \author{
 Andreas Blaette
 }
+

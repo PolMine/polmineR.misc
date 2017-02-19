@@ -29,6 +29,7 @@ Collate:
     'as.svmlight_method.R'
     'binarize_method.R'
     'bughunt_method.R'
+    'cosine_similarity_method.R'
     'ctm_method.R'
     'distance_method.R'
     'egoNetwork_method.R'
@@ -38,8 +39,7 @@ Collate:
     'pAttribute_method.R'
     'papply_function.R'
     'selectLabel_function.R'
-    'cosine_similarity_method.R'
     'store_method.R'
     'validate_method.R'
     'virtualMatrixClass.R'
-RoxygenNote: 6.0.1
+RoxygenNote: 5.0.1

@@ -14,3 +14,4 @@ selectLabel(x, labelCol = "label")
 \description{
 Select label from data.frame!
 }
+

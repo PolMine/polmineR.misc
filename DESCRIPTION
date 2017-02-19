@@ -11,11 +11,16 @@ Imports:
     polmineR,
     rJava,
     slam,
-    bigmemory
+    bigmemory,
+    bigalgebra,
+    bigpca,
+    data.table,
+    proxy,
+    knitr
 VignetteBuilder: knitr
 LazyData: yes
 Description: miscellaneaous extensions for the polmineR base package
-License: 
+License: GPL-3
 Collate:
     'polmineR.misc_package.R'
     'Duplicates_class.R'
@@ -33,7 +38,7 @@ Collate:
     'pAttribute_method.R'
     'papply_function.R'
     'selectLabel_function.R'
-    'similarity_method.R'
+    'cosine_similarity_method.R'
     'store_method.R'
     'validate_method.R'
     'virtualMatrixClass.R'

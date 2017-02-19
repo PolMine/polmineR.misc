@@ -253,7 +253,8 @@ Duplicates <- setRefClass(
       cposMatrix <- do.call(rbind, cposList)
       colnames(cposMatrix) <- c("cpos_left", "cpos_right")
       cposDT <- data.table(cposMatrix)
-      cposDT[, sAttributeID := sAttr, with = FALSE]
+      cposDT[, sAttributeID := sAttr]
+      setnames(cposDT, old = "sAttributeID", new = sAttributeID)
       setkeyv(cposDT, sAttributeID)
       
       duplicates_df <- as.data.frame(.self$duplicates[, c("name", "duplicate_name"), with = FALSE])
@@ -278,10 +279,10 @@ Duplicates <- setRefClass(
       setkeyv(duplicatesDT, "duplicate")
       
       .self$annotation <- duplicatesDT[cposDT]
-      setnames(.self$annotation, old = "duplicate", new = .self$sAttribute)
+      setnames(.self$annotation, old = "duplicate", new = sAttributeID)
       .self$annotation[, "duplicate" := !is.na(.self$annotation[["original"]])]
       .self$annotation[, "original" := sapply(.self$annotation[["original"]], function(x) ifelse(is.na(x), "", x))]
-      setcolorder(.self$annotation, c("cpos_left", "cpos_right", .self$sAttribute, "duplicate", "original"))
+      setcolorder(.self$annotation, c("cpos_left", "cpos_right", sAttributeID, "duplicate", "original"))
       setorderv(.self$annotation, cols = "cpos_left")
     },
     

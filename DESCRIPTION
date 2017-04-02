@@ -1,8 +1,8 @@
 Package: polmineR.misc
 Type: Package
 Title: polmineR.misc
-Version: 0.1.6
-Date: 2017-02-19
+Version: 0.1.7
+Date: 2017-04-03
 Author: Andreas Blaette
 Maintainer: Andreas Blaette <andreas.blaette@uni-due.de>
 Imports:

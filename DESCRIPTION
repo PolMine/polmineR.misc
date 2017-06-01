@@ -1,32 +1,35 @@
 Package: polmineR.misc
 Type: Package
 Title: polmineR.misc
-Version: 0.1.7
-Date: 2017-04-03
+Version: 0.1.8
+Date: 2017-06-01
 Author: Andreas Blaette
 Maintainer: Andreas Blaette <andreas.blaette@uni-due.de>
 Imports:
     methods,
     R6,
     polmineR,
-    rJava,
     slam,
     bigmemory,
     bigalgebra,
     bigpca,
     data.table,
     proxy,
-    knitr
+    knitr,
+    pbapply
+Suggests:
+    rJava
 VignetteBuilder: knitr
 LazyData: yes
 Description: miscellaneaous extensions for the polmineR base package
 License: GPL-3
-Collate:
+Collate: 
     'polmineR.misc_package.R'
     'Duplicates_class.R'
     'Hitanalysis_class.R'
     'as.dfm_method.R'
     'as.svmlight_method.R'
+    'as.tibble_method.R'
     'binarize_method.R'
     'bughunt_method.R'
     'cosine_similarity_method.R'
@@ -42,4 +45,4 @@ Collate:
     'store_method.R'
     'validate_method.R'
     'virtualMatrixClass.R'
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1

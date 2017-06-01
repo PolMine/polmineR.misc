@@ -10,4 +10,3 @@
 \description{
 store mallet object
 }
-

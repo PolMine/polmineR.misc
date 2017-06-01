@@ -3,8 +3,8 @@
 \docType{methods}
 \name{cosine_similarity}
 \alias{cosine_similarity}
-\alias{cosine_similarity,TermDocumentMatrix-method}
 \alias{cosine_similarity,numeric-method}
+\alias{cosine_similarity,TermDocumentMatrix-method}
 \title{Calculate cosine similarity.}
 \usage{
 cosine_similarity(x, ...)
@@ -35,4 +35,3 @@ cosine_similarity(x, ...)
 Calculate cosine similarity of two vectors.
 Note: Much faster for pairwise comparisons than proxy::simil.
 }
-

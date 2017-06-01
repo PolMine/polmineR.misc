@@ -21,4 +21,3 @@ bughunt(.Object, ...)
 This is utility to trace back the cause of errors that cwb-encode 
 throws out when XML elements are nested.
 }
-

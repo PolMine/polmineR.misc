@@ -49,4 +49,3 @@ Count the number of characters
 
 count characters
 }
-

@@ -2,8 +2,8 @@
 % Please edit documentation in R/Duplicates_class.R
 \docType{class}
 \name{Duplicates-class}
-\alias{Duplicates}
 \alias{Duplicates-class}
+\alias{Duplicates}
 \title{Detect Duplicates}
 \arguments{
 \item{x}{a \code{"partitionBundle"} object defining the documents that will be compared to detect duplicates}
@@ -41,6 +41,36 @@ the article that appeared later will be considered the duplicate.
 Different \code{partitionBundle}-objects can be passed into the \code{detectDuplicates}-method successively. The field
 \code{duplicates} will be appended by the duplicates that are newly detected.
 }
+\section{Fields}{
+
+\describe{
+\item{\code{corpus}}{the CWB corpus the (last) \code{partitionBundle} used describes}
+
+\item{\code{charRegex}}{regex defining the characters to keep}
+
+\item{\code{charCount}}{count of the characters in the \code{partitionBundle}}
+
+\item{\code{number}}{of days before and after a document was published}
+
+\item{\code{pAttribute}}{the p-attribute used (defaults to "word")}
+
+\item{\code{sAttribute}}{the s-attribute of the date of a text in the corpus}
+
+\item{\code{sample}}{size of the sample of the \code{partitionBundle} that the character count is based on}
+
+\item{\code{threshold}}{minimum similarity value to identify two texts as duplicates}
+
+\item{\code{whatToCompare}}{a \code{simple_triplet_matrix} with the texts to be compared}
+
+\item{\code{similarityMatrix}}{a \code{simple_triplet_matrix} with similarities of texts}
+
+\item{\code{ngramDocumentMatrix}}{a matrix (inheriting from \code{TermDocumentMatrix}) with ngram counts in the documents of the \code{partitionBundle}}
+
+\item{\code{datePrep}}{function to rework dates if not in the DD-MM-YYYY standard format}
+
+\item{\code{annotation}}{a \code{data.table} with corpus positions}
+}}
+
 \section{Methods}{
 
 \describe{
@@ -62,24 +92,7 @@ generate cwb-s-encode command and execute it, if wanted.}
 
 \item{\code{makeDuplicateDataTable(x, mc = FALSE, progress = TRUE, verbose = TRUE)}}{Turn similarities of documents into a data.table that identifies original document and duplicate.}
 }}
-\section{Fields}{
 
-\describe{
-\item{\code{corpus}:}{the CWB corpus the (last) \code{partitionBundle} used describes}
-\item{\code{charRegex}:}{regex defining the characters to keep}
-\item{\code{charCount}:}{count of the characters in the \code{partitionBundle}}
-\item{\code{n}:}{number of days before and after a document was published}
-\item{\code{pAttribute}:}{the p-attribute used (defaults to "word")}
-\item{\code{sAttribute}:}{the s-attribute of the date of a text in the corpus}
-\item{\code{sample}:}{size of the sample of the \code{partitionBundle} that the character count is based on}
-\item{\code{threshold}:}{minimum similarity value to identify two texts as duplicates}
-\item{\code{whatToCompare}:}{a \code{simple_triplet_matrix} with the texts to be compared}
-\item{\code{similarityMatrix}:}{a \code{simple_triplet_matrix} with similarities of texts}
-\item{\code{ngramDocumentMatrix}:}{a matrix (inheriting from \code{TermDocumentMatrix}) with ngram counts in the documents of the \code{partitionBundle}}
-\item{\code{datePrep}:}{function to rework dates if not in the DD-MM-YYYY standard format}
-\item{\code{annotation}:}{\code{data.table} with corpus positions}
-}
-}
 \examples{
 \dontrun{
 foo <- partitionBundle(
@@ -91,4 +104,3 @@ foo <- partitionBundle(
 doubled <- duplicates(foo)
 }
 }
-

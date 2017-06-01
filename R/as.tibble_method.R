@@ -10,6 +10,8 @@ setMethod("as.tibble", "partition", function(.Object, pAttribute){
   T
 })
 
+#' Turn partition into tibble.
+#' 
 #' @importFrom dplyr bind_rows
 #' @importFrom pbapply pblapply
 #' @examples

@@ -40,7 +40,7 @@ setMethod("cosine_similarity", "TermDocumentMatrix", function(x, y = NULL, progr
   if (verbose) message("... calculating similarities")
   
   cosine_values <- pbapply::pblapply(
-    c(1:length(y$i)),
+    1:length(y$i),
     FUN = function(i) cosine_similarity(as.vector(x[, y$i[i]]), as.vector(x[, y$j[i]])),
     cl = mc
   )

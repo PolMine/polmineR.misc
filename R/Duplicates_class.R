@@ -19,22 +19,20 @@ NULL
 #' Different \code{partitionBundle}-objects can be passed into the \code{detectDuplicates}-method successively. The field
 #' \code{duplicates} will be appended by the duplicates that are newly detected. 
 #' 
-#' @section Fields:
-#' \describe{
-#' \item{\code{corpus}:}{the CWB corpus the (last) \code{partitionBundle} used describes}
-#' \item{\code{charRegex}:}{regex defining the characters to keep}
-#' \item{\code{charCount}:}{count of the characters in the \code{partitionBundle}}
-#' \item{\code{n}:}{number of days before and after a document was published}
-#' \item{\code{pAttribute}:}{the p-attribute used (defaults to "word")}
-#' \item{\code{sAttribute}:}{the s-attribute of the date of a text in the corpus}
-#' \item{\code{sample}:}{size of the sample of the \code{partitionBundle} that the character count is based on}
-#' \item{\code{threshold}:}{minimum similarity value to identify two texts as duplicates}
-#' \item{\code{whatToCompare}:}{a \code{simple_triplet_matrix} with the texts to be compared}
-#' \item{\code{similarityMatrix}:}{a \code{simple_triplet_matrix} with similarities of texts}
-#' \item{\code{ngramDocumentMatrix}:}{a matrix (inheriting from \code{TermDocumentMatrix}) with ngram counts in the documents of the \code{partitionBundle}}
-#' \item{\code{datePrep}:}{function to rework dates if not in the DD-MM-YYYY standard format}
-#' \item{\code{annotation}:}{\code{data.table} with corpus positions}
-#' }
+#' @field corpus the CWB corpus the (last) \code{partitionBundle} used describes
+#' @field charRegex regex defining the characters to keep
+#' @field charCount count of the characters in the \code{partitionBundle}
+#' @field number of days before and after a document was published
+#' @field pAttribute the p-attribute used (defaults to "word")
+#' @field sAttribute the s-attribute of the date of a text in the corpus
+#' @field sample size of the sample of the \code{partitionBundle} that the character count is based on
+#' @field threshold minimum similarity value to identify two texts as duplicates
+#' @field whatToCompare  a \code{simple_triplet_matrix} with the texts to be compared
+#' @field similarityMatrix a \code{simple_triplet_matrix} with similarities of texts
+#' @field ngramDocumentMatrix a matrix (inheriting from \code{TermDocumentMatrix}) with ngram counts in the documents of the \code{partitionBundle}
+#' @field datePrep function to rework dates if not in the DD-MM-YYYY standard format
+#' @field annotation a \code{data.table} with corpus positions
+#' 
 #' @param x a \code{"partitionBundle"} object defining the documents that will be compared to detect duplicates
 #' @param charRegex a regex defining the characters to keep
 #' @param sAttribute the s-attribute providing the date
@@ -58,6 +56,7 @@ NULL
 #' @exportClass Duplicates
 #' @rdname Duplicates
 #' @importFrom parallel mclapply
+#' @importFrom pbapply pblapply
 #' @import data.table
 Duplicates <- setRefClass(
   
@@ -81,69 +80,69 @@ Duplicates <- setRefClass(
   ),
   
   methods = list(
+    
     initialize = function(charRegex = "[a-zA-Z]", pAttribute = "word", sAttribute = "text_date", datePrep = NULL, sample = 1000L, n = 1L, threshold = 0.9){
+      
       "Initialize object of class 'Duplicates'."
-      charRegex <<- charRegex
-      sAttribute <<- sAttribute
-      pAttribute <<- pAttribute
-      sample <<- as.integer(sample)
-      n <<- as.integer(n)
-      threshold <<- threshold
-      if (is.null(datePrep)) datePrep <<- function(x) x
+      
+      .self$charRegex <- charRegex
+      .self$sAttribute <- sAttribute
+      .self$pAttribute <- pAttribute
+      .self$sample <- as.integer(sample)
+      .self$n <- as.integer(n)
+      .self$threshold <- threshold
+      if (is.null(datePrep)) .self$datePrep <- function(x) x
+      
     },
+    
     
     getWhatToCompare = function(x, reduce = TRUE, verbose = FALSE, progress = TRUE, mc = FALSE){
       
       "Identify documents that will be compared (based on date of documents)."
       
-      if (!is.null(.self$sAttribute)){
-        if (requireNamespace("chron", quietly=TRUE)){
-          message("... chron-package required and loaded")
-        } else {
-          stop("the 'chron'-package needs to be installed but is not available")
-        }
-        if (verbose == TRUE) message("... getting files to be compared")
-        dates <- unlist(lapply(setNames(x@objects, names(x)), function(y) sAttributes(y, .self$sAttribute)))
-        if (!is.null(.self$datePrep)) dates <- sapply(dates, .self$datePrep)
-        objectSplittedByDate <- split(c(1:length(x)), f = dates)
-        .getWhatToCompare <- function(i){
-          dateOfDoc <- try(as.POSIXct(unname(dates[i])))
-          if (is(dateOfDoc)[1] == "try-error") return(NULL)
+      if (!.self$sAttribute %in% sAttributes(.self$corpus)){
+        stop("no valid s-attribute in field 'sAttribute'")
+      }
+      if (requireNamespace("chron", quietly = TRUE)){
+        message("... required package 'chron' is available")
+      } else {
+        stop("the 'chron'-package needs to be installed but is not available")
+      }
+      if (verbose) message("... getting docs to be compared")
+      dates <- unlist(lapply(setNames(x@objects, names(x)), function(y) sAttributes(y, .self$sAttribute)))
+      if (!is.null(.self$datePrep)) dates <- sapply(dates, .self$datePrep)
+      objectSplittedByDate <- split(1:length(x), f = dates)
+      .getWhatToCompare <- function(i){
+        dateOfDoc <- try(as.POSIXct(unname(dates[i])))
+        if (is(dateOfDoc)[1] == "try-error") return(NULL)
+        if (.self$n > 0){
           dateRange <- chron::seq.dates(
             from = strftime(dateOfDoc - 1 - (.self$n - 1) * 86400, format = "%m/%d/%Y"),
             to = strftime(dateOfDoc + 1 + (.self$n - 1) * 86400, format = "%m/%d/%Y"),
             by = "days", format = "%Y-%m-%d"
           )
-          datesToGet <- sapply(c(1:length(dateRange)), function(j) {
-            as.character(strftime(dateRange[j], format="%Y-%m-%d"))
-          })
-          unlist(lapply(datesToGet, function(y) objectSplittedByDate[[y]]))
-        }
-        if (mc == FALSE){
-          docsToCompare <- lapply(c(1:length(x)), .getWhatToCompare)
         } else {
-          docsToCompare <- parallel::mclapply(c(1:length(x)), .getWhatToCompare)
+          dateRange <- dateOfDoc
         }
-        
-        docsToCompareMatrix <- simple_triplet_matrix(
-          i = unlist(docsToCompare),
-          j = unlist(lapply(c(1:length(docsToCompare)), function(i) rep(i, times=length(docsToCompare[[i]])))),
-          v = rep(NA, times=length(unlist(docsToCompare))),
-          ncol = length(x),
-          nrow = length(x),
-          dimnames = list(rows = names(x), columns = names(x))
-        )
-        if (reduce == TRUE){
-          keepOrDrop <- sapply(
-            c(1:length(docsToCompareMatrix$i)),
-            function(i) ifelse(docsToCompareMatrix$i[i] < docsToCompareMatrix$j[i], TRUE, FALSE)
-          )
-          for (x in c("i", "j", "v")) docsToCompareMatrix[[x]] <- docsToCompareMatrix[[x]][keepOrDrop]
-        }
-        return(docsToCompareMatrix)
-      } else {
-        stop("so far, getting comparables is only implemented based on dates")
+        datesToGet <- as.character(strftime(dateRange, format = "%Y-%m-%d"))
+        unlist(lapply(datesToGet, function(y) objectSplittedByDate[[y]]))
       }
+      docsToCompare <- pblapply(1:length(x), FUN = .getWhatToCompare, cl = getOption("polmineR.cores"))
+      
+      docsToCompareMatrix <- simple_triplet_matrix(
+        i = unlist(docsToCompare),
+        j = unlist(lapply(1:length(docsToCompare), function(i) rep(i, times = length(docsToCompare[[i]])))),
+        v = rep(NA, times = length(unlist(docsToCompare))),
+        ncol = length(x),
+        nrow = length(x),
+        dimnames = list(rows = names(x), columns = names(x))
+      )
+      if (reduce){
+        if (verbose) message("... reduction of document comparisons")
+        keepOrDrop <- ifelse(docsToCompareMatrix$i < docsToCompareMatrix$j, TRUE, FALSE)
+        for (x in c("i", "j", "v")) docsToCompareMatrix[[x]] <- docsToCompareMatrix[[x]][keepOrDrop]
+      }
+      return( docsToCompareMatrix )
     },
     
     makeDuplicateDataTable = function(x, mc = FALSE, progress = TRUE, verbose = TRUE){
@@ -201,7 +200,7 @@ Duplicates <- setRefClass(
       
       .self$corpus <- unique(sapply(x@objects, function(x) x@corpus))
       stopifnot(length(.self$corpus) == 1)
-      if (verbose == TRUE) message("... counting characters")
+      if (verbose) message("... counting characters")
       if (is.numeric(.self$sample)){
         bundleSample <- sample(x, size = .self$sample)
         nChars <- nchars(
@@ -212,24 +211,61 @@ Duplicates <- setRefClass(
         rm(bundleSample)
       } else {
         nChars <- nchars(
-          x, .self$pAttribute, regexCharsToKeep = .self$charRegex, toLower=TRUE, decreasing=FALSE,
-          mc=FALSE, progress = progress
+          x, .self$pAttribute, regexCharsToKeep = .self$charRegex, toLower = TRUE, decreasing = FALSE,
+          mc = FALSE, progress = progress
         )
       }
       .self$charCount <- setNames(as.numeric(nChars), names(nChars))
       if (verbose) message("... preparing ngram matrix")
       ngramBundle <- ngrams(x, n = 4, char = names(.self$charCount[1:10]), mc = mc, progress = progress)
       .self$ngramDocumentMatrix <- as.TermDocumentMatrix(ngramBundle, col = "count")
-      .self$ngramDocumentMatrix <- polmineR::weigh(.self$ngramDocumentMatrix, method = "tfidf")
-      if (verbose) message("... identifying comparables")
-      .self$whatToCompare <- .self$getWhatToCompare(x = x, verbose = verbose, mc = mc, progress = progress)
-      if (verbose) message("... calculating cosine similarity")
-      .self$similarityMatrix <- cosine_similarity(
-        x = .self$ngramDocumentMatrix, y = .self$whatToCompare,
-        mc = mc, progress = progress
+      .self$ngramDocumentMatrix <- weigh(.self$ngramDocumentMatrix, method = "tfidf")
+      
+      if (.self$n == 0){
+        if (verbose) message("... getting dates, using s-attribute ", .self$sAttribute)
+        dates <- pblapply(x@objects, function(P) sAttributes(P, .self$sAttribute))
+        groups <- split(x = names(dates), f = as.factor(unname(unlist(dates))))
+        # drop groups with only one id (nothing to compare)
+        for (i in rev(unname(which(sapply(groups, length) <= 1)))) groups[[i]] <- NULL
+          
+        Ms <- pblapply(
+          groups,
+          function(ids){
+            M <- as.matrix(.self$ngramDocumentMatrix[,ids])
+            emptyRows <- unname(which(rowSums(M) == 0))
+            if (length(emptyRows) > 0) M <- M[-emptyRows,]
+            C <- cosine_similarity(x = t(M), how = "proxy")
+            dt <- data.table(melt(as.matrix(C), variable.factor = FALSE))
+            aIsB <- which(ifelse(dt[["Var1"]] == dt[["Var2"]], TRUE, FALSE) == TRUE)
+            if (length(aIsB) > 0) dt <- dt[-aIsB]
+            dt
+          }
         )
-      if (verbose) message("... preparing data.table")
-      # here: If duplicates slot not empty, add rows
+        simDT <- rbindlist(Ms)
+        # factors in columns - turn it into character vectors
+        for (col in c("Var1", "Var2")) simDT[[col]] <- as.character(simDT[[col]])
+        ids <- unique(c(simDT[["Var1"]], simDT[["Var2"]]))
+        newIndex <- setNames(1:length(ids), ids)
+        simDT[["i"]] <- unname( newIndex[ simDT[["Var1"]] ] )
+        simDT[["j"]] <- unname( newIndex[ simDT[["Var2"]] ] )
+        # keep only one similarity score per pair
+        # simDTmin <- simDT[which(ifelse(simDT[["i"]] < simDT[["j"]], TRUE, FALSE) == TRUE)]
+        .self$similarityMatrix <- simple_triplet_matrix(
+          i = simDT[["i"]], j = simDT[["j"]], v = simDT[["value"]],
+          dimnames = list(names(newIndex), names(newIndex))
+          )
+      } else {
+        if (verbose) message("... identifying comparables")
+        .self$whatToCompare <- .self$getWhatToCompare(x = x, verbose = verbose, mc = mc, progress = progress)
+        if (verbose) message("... calculating cosine similarity")
+        .self$similarityMatrix <- cosine_similarity(
+          x = .self$ngramDocumentMatrix, y = .self$whatToCompare,
+          mc = mc, progress = progress
+        )
+        if (verbose) message("... preparing data.table")
+        # here: If duplicates slot not empty, add rows
+        
+      }
       newDuplicateDT <- .self$makeDuplicateDataTable(x = x, mc = mc, verbose = verbose, progress = TRUE)
       if (is.null(.self$duplicates)){
         .self$duplicates <- newDuplicateDT

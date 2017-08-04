@@ -16,14 +16,13 @@ Imports:
     data.table,
     proxy,
     knitr,
-    pbapply
-Suggests:
+    pbapply,
     rJava
 VignetteBuilder: knitr
 LazyData: yes
 Description: miscellaneaous extensions for the polmineR base package
 License: GPL-3
-Collate: 
+Collate:
     'polmineR.misc_package.R'
     'Duplicates_class.R'
     'Hitanalysis_class.R'
@@ -46,4 +45,3 @@ Collate:
     'validate_method.R'
     'virtualMatrixClass.R'
 RoxygenNote: 5.0.1
-

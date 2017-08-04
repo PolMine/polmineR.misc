@@ -1,6 +1,8 @@
+#' @rdname as.tibble
 setGeneric("as.tibble", function(.Object, ...) standardGeneric("as.tibble"))
 
 #' @importFrom tibble tibble
+#' @rdname as.tibble
 setMethod("as.tibble", "partition", function(.Object, pAttribute){
   stopifnot(length(pAttribute) == 1 && pAttribute %in% pAttributes(.Object))
   T <- tibble(token = getTokenStream(.Object, pAttribute = pAttribute))
@@ -28,7 +30,7 @@ setMethod("as.tibble", "partition", function(.Object, pAttribute){
 #'   sAttributeDates = "speaker_date", sAttributeNames = "speaker_name", gap = 500,
 #'   mc = TRUE, progress = TRUE
 #' )
-#' for (i in rev(which(summary(speeches)[["token"]] == 0))) speeches@objects[[i]] <- NULL
+#' for (i in rev(which(summary(speeches)[["token"]] == 0))) speeches@@objects[[i]] <- NULL
 #' tib <- as.tibble(speeches, pAttribute = "word")
 #' Y <- ddply(
 #'   .data = tib,
@@ -38,6 +40,7 @@ setMethod("as.tibble", "partition", function(.Object, pAttribute){
 #'   )
 #' colnames(Y)[5] <- "fulltext"
 #' }
+#' @rdname as.tibble
 setMethod("as.tibble", "partitionBundle", function(.Object, pAttribute, mc = getOption("polmineR.mc")){
   if (mc == FALSE) mc <- 1
   Ts <- pblapply(

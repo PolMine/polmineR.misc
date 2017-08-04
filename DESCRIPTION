@@ -45,4 +45,5 @@ Collate:
     'store_method.R'
     'validate_method.R'
     'virtualMatrixClass.R'
-RoxygenNote: 6.0.1
+RoxygenNote: 5.0.1
+

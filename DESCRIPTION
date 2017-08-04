@@ -45,6 +45,5 @@ Collate:
     'store_method.R'
     'validate_method.R'
     'virtualMatrixClass.R'
-    'as.tibble_method.R'
 RoxygenNote: 5.0.1
 

@@ -23,6 +23,7 @@ LazyData: yes
 Description: miscellaneaous extensions for the polmineR base package
 License: GPL-3
 Collate:
+    'CoreNLP_class.R'
     'polmineR.misc_package.R'
     'Duplicates_class.R'
     'Hitanalysis_class.R'
@@ -44,4 +45,5 @@ Collate:
     'store_method.R'
     'validate_method.R'
     'virtualMatrixClass.R'
+    'xmlToDT_function.R'
 RoxygenNote: 5.0.1

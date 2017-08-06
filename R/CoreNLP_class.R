@@ -5,11 +5,13 @@
 #' library(xml2)
 #' library(stringi)
 #' library(rJava)
+#' library(pbapply)
+#' library(parallel)
 #' 
 #' options(java.parameters = "-Xmx4g")
-#' CNLP <- CoreNLP$new(method = "txt")
+#' CNLP <- CoreNLP$new(method = "txt", filename = "/home/blaette/Lab/tmp/coreNLP.txt")
 #' 
-#' filenames <- Sys.glob(sprintf("%s/*.xml", "/Users/blaette/Lab/gitlab/plprbtpdf_tei"))
+#' filenames <- Sys.glob(sprintf("%s/*.xml", "~/Lab/gitlab/plprbttxt_tei"))
 #' filenames <- filenames[1:2]
 #' 
 #' metadata <- c(
@@ -17,16 +19,19 @@
 #'   session = "//titleStmt/sessionNo",
 #'   date = "//publicationStmt/date"
 #' )
-#' dt <- pbapply::pblapply(filenames, function(x) xmlToDT(x, meta = metadata)) %>% rbindlist()
+#' dtList <- pblapply(filenames, function(x) xmlToDT(x, meta = metadata, mc = 1))
+#' dt <- rbindlist(dtList, fill = TRUE)
+#' rm(dtList)
 #' dt2 <- dt[is.na(speaker)][, speaker := NULL] # remove text in speaker tag
 #' dt2[, chunk := 1:nrow(dt2)]
 #' for (x in c("div_what", "div_desc", "body", "TEI", "p")) dt2[[x]] <- NULL
 #' dt2[["stage_type"]] <- ifelse(is.na(dt2[["stage_type"]]), "speech", "interjection")
+#' rm(dt)
 #' 
-#' annotationList <- pbapply::pblapply(
+#' pbapply::pblapply(
 #'   1:nrow(dt2),
-#'   function(i) CNLP$annotate(dt2[["text"]][i])[,chunk := i] # add chunks for matching with metadata table
-#'   )
+#'   function(i) CNLP$annotate(dt2[["text"]][i]) # add chunks for matching with metadata table
+#' )
 #' tokenStreamDT <- rbindlist(annotationList)
 #' tokenStreamDT[, cpos := 0:(nrow(tokenStreamDT) - 1)]
 #' encode(tokenStreamDT[["token"]], corpus = "FOO", pAttribute = "word", encoding = "UTF-8")
@@ -43,6 +48,8 @@
 #'   encode(dtEnc, corpus = "FOO", sAttribute = col)
 #' }
 #' use()
+#' @param filename if filename is not NULL (default), the object will be initialized with
+#' a FileWriter, and new annotations will be appended
 #' @param colsToKeep character vector with names of columens of the output data.table
 #' @importFrom jsonlite fromJSON
 #' @importFrom stringi stri_match
@@ -55,6 +62,8 @@ CoreNLP <- setRefClass(
     tagger = "jobjRef",
     xmlifier = "jobjRef",
     jsonifier = "jobjRef",
+    writer = "jobjRef",
+    append = "logical",
     method = "character",
     colsToKeep = "character"
     
@@ -65,12 +74,13 @@ CoreNLP <- setRefClass(
     initialize = function(
       stanfordDir = NULL, propertiesFile = NULL, 
       method = c("txt", "json", "xml"),
-      colsToKeep = c("sentence", "id", "token", "pos", "ner")
+      colsToKeep = c("sentence", "id", "token", "pos", "ner"),
+      filename = NULL
       ){
 
       .self$colsToKeep <- colsToKeep
       
-      rJava::.jinit() # does it harm when called again?
+      rJava::.jinit(force.init = TRUE) # does it harm when called again?
 
       # add stanford jars to classpath
       if (is.null(stanfordDir)){
@@ -98,11 +108,23 @@ CoreNLP <- setRefClass(
         "edu.stanford.nlp.pipeline.StanfordCoreNLP",
         basename(propertiesFile)
       )
+      
+      if (is.null(filename)){
+        .self$append <- FALSE
+      } else {
+        .self$append <- TRUE
+        .self$writer <- new(
+          J("java.io.PrintWriter"),
+          .jnew("java.io.FileOutputStream",
+                .jnew("java.io.File", filename),
+                TRUE)
+          )
+      }
 
     },
 
     usingXML = function(anno){
-      doc <- .jcall(xmlifier, "Lnu/xom/Document;", "annotationToDoc", anno, tagger)
+      doc <- .jcall(.self$xmlifier, "Lnu/xom/Document;", "annotationToDoc", anno, .self$tagger)
       xml <- .jcall(doc, "Ljava/lang/String;", "toXML")
       df <- coreNLP::getToken(coreNLP:::parseAnnoXML(xml))
       colnames(df) <- tolower(colnames(df))
@@ -110,12 +132,12 @@ CoreNLP <- setRefClass(
     },
     
     usingJSON = function(anno){
-      j <- .jcall(.self$jsonifier, "Ljava/lang/String;", "jsonPrint", anno)
+      j <- .jcall(.self$jsonifier, "Ljava/lang/String;", "print", anno)
       dat <- jsonlite::fromJSON(j)
       dt <- rbindlist(
         lapply(
           1:length(dat$sentences$tokens),
-          function(i)as.data.table(dat$sentences$tokens[[i]])[, "sentence" := i]
+          function(i) as.data.table(dat$sentences$tokens[[i]])[, "sentence" := i]
         )
       )
       setnames(dt, old = c("index", "word"), new = c("id", "token"))
@@ -123,35 +145,39 @@ CoreNLP <- setRefClass(
     },
     
     usingTXT = function(anno){
-      .jcall(
-        .self$tagger, "V", "prettyPrint", anno,
-        .jnew("java.io.PrintWriter", tf <- tempfile())
-      )
-      out <- readLines(tf)
+      if (.self$append == FALSE){
+        .self$writer <- .jnew("java.io.PrintWriter", filename <- tempfile())
+      }
+      .jcall(.self$tagger, "V", "prettyPrint", anno, .self$writer)
+      # .jmethods(writer, "V", "close")
+      if (.self$append == FALSE){
+        return( .self$parsePrettyPrint(filename) )
+      } else {
+        return( NULL )
+      }
+    },
+    
+    parsePrettyPrint = function(x = NULL, filename = NULL, mc = 1){
+      if (is.null(x)) x <- readLines(filename)
       chunks <- cut(
-        x = 1:length(out),
-        c(grep("^Sentence\\s#\\d+", out), length(out)),
+        1:length(x),
+        c(grep("^Sentence\\s#\\d+", x), length(x)),
         include.lowest = TRUE, right = FALSE
-        )
+      )
       dts <- lapply(
-        split(x = out, f = chunks),
-        function(x){
-          txt <- x[grepl("^\\[.*\\]$", x)] # get lines with annotation
+        split(x, f = chunks),
+        function(chunk){
+          txt <- chunk[grepl("^\\[.*\\]$", chunk)] # get lines with annotation
           regex <- "^.*?Text=(.*?)\\s.*\\sPartOfSpeech=(.*?)\\sNamedEntityTag=(.*?)\\]"
           df <- stringi::stri_match(txt, regex = regex)
-          dt <- as.data.table(df)[,2:4]
+          dt <- as.data.table(df)[,2:4, with = FALSE]
           colnames(dt) <- c("token", "pos", "ner")
           dt
-          # L <- lapply(
-          #   setNames(.self$colsToKeep, .self$colsToKeep),
-          #   function(toGet){
-          #     gsub(sprintf("^.*?%s=(.*?)(\\s|\\]).*?$", toGet), "\\1", txt, perl = T)
-          #   }
-          # )
-          # as.data.table(L)
-        }
+        },
+        cl = mc
       )
-      rbindlist(dts)
+      # rbindlist(dts)
+      dts
     },
     
     annotate = function(txt){

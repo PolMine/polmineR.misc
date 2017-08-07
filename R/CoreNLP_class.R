@@ -9,9 +9,9 @@
 #' library(parallel)
 #' 
 #' options(java.parameters = "-Xmx4g")
-#' CNLP <- CoreNLP$new(method = "txt", filename = "/home/blaette/Lab/tmp/coreNLP.txt")
+#' CNLP <- CoreNLP$new(method = "json", filename = "~/Lab/tmp/coreNLP.json")
 #' 
-#' filenames <- Sys.glob(sprintf("%s/*.xml", "~/Lab/gitlab/plprbttxt_tei"))
+#' filenames <- Sys.glob(sprintf("%s/*.xml", "~/Lab/gitlab/plprbtpdf_tei"))
 #' filenames <- filenames[1:2]
 #' 
 #' metadata <- c(
@@ -28,11 +28,15 @@
 #' dt2[["stage_type"]] <- ifelse(is.na(dt2[["stage_type"]]), "speech", "interjection")
 #' rm(dt)
 #' 
-#' pbapply::pblapply(
+#' dummy <- pbapply::pblapply(
 #'   1:nrow(dt2),
-#'   function(i) CNLP$annotate(dt2[["text"]][i]) # add chunks for matching with metadata table
+#'   function(i) CNLP$annotate(dt2[["text"]][i], chunk = i) # add chunks for matching with metadata table
 #' )
-#' tokenStreamDT <- rbindlist(annotationList)
+#' J <- readLines("~/Lab/tmp/coreNLP.json")
+#' J <- readr::read_lines(file = "~/Lab/tmp/coreNLP.json", progress = TRUE)
+#' dts <- pbapply::pblapply(J, CNLP$parseJson)
+#' tokenStreamDT <- rbindlist(dts)
+#' 
 #' tokenStreamDT[, cpos := 0:(nrow(tokenStreamDT) - 1)]
 #' encode(tokenStreamDT[["token"]], corpus = "FOO", pAttribute = "word", encoding = "UTF-8")
 #' encode(tokenStreamDT[["pos"]], corpus = "FOO", pAttribute = "pos")
@@ -65,7 +69,8 @@ CoreNLP <- setRefClass(
     writer = "jobjRef",
     append = "logical",
     method = "character",
-    colsToKeep = "character"
+    colsToKeep = "character",
+    destfile = "character"
     
   ),
   
@@ -113,17 +118,20 @@ CoreNLP <- setRefClass(
         .self$append <- FALSE
       } else {
         .self$append <- TRUE
-        .self$writer <- new(
-          J("java.io.PrintWriter"),
-          .jnew("java.io.FileOutputStream",
-                .jnew("java.io.File", filename),
-                TRUE)
+        .self$destfile <- filename
+        if (method == "txt"){
+          .self$writer <- new(
+            J("java.io.PrintWriter"),
+            .jnew("java.io.FileOutputStream",
+                  .jnew("java.io.File", filename),
+                  TRUE)
           )
+        }
       }
 
     },
 
-    usingXML = function(anno){
+    annotationToXML = function(anno){
       doc <- .jcall(.self$xmlifier, "Lnu/xom/Document;", "annotationToDoc", anno, .self$tagger)
       xml <- .jcall(doc, "Ljava/lang/String;", "toXML")
       df <- coreNLP::getToken(coreNLP:::parseAnnoXML(xml))
@@ -131,20 +139,22 @@ CoreNLP <- setRefClass(
       as.data.table(df[, colsToKeep])
     },
     
-    usingJSON = function(anno){
-      j <- .jcall(.self$jsonifier, "Ljava/lang/String;", "print", anno)
-      dat <- jsonlite::fromJSON(j)
-      dt <- rbindlist(
-        lapply(
-          1:length(dat$sentences$tokens),
-          function(i) as.data.table(dat$sentences$tokens[[i]])[, "sentence" := i]
-        )
-      )
-      setnames(dt, old = c("index", "word"), new = c("id", "token"))
-      dt[, .self$colsToKeep, with = FALSE]
+    annotationToJSON = function(anno, chunk = NULL){
+      jsonString <- .jcall(.self$jsonifier, "Ljava/lang/String;", "print", anno)
+      jsonString <- gsub("\\s+", " ", jsonString)
+      if (!is.null(chunk)){
+        stopifnot(is.numeric(chunk))
+        jsonString <- sprintf('{"chunk": %d, %s', chunk, substr(jsonString, 2, nchar(jsonString)))
+      }
+      cat(jsonString, "\n", file = .self$destfile, append = .self$append)
+      if (.self$append == FALSE){
+        return(jsonString)
+      } else {
+        return( NULL )
+      }
     },
     
-    usingTXT = function(anno){
+    annotationToTXT = function(anno){
       if (.self$append == FALSE){
         .self$writer <- .jnew("java.io.PrintWriter", filename <- tempfile())
       }
@@ -157,6 +167,24 @@ CoreNLP <- setRefClass(
       }
     },
     
+    parseJson = function(x){
+      dat <- jsonlite::fromJSON(x)
+      dt <- rbindlist(
+        lapply(
+          1:length(dat$sentences$tokens),
+          function(i) as.data.table(dat$sentences$tokens[[i]])[, "sentence" := i]
+        )
+      )
+      if ("chunk" %in% names(dat)){
+        dt[, "chunk" := dat[["chunk"]]]
+        cols <- c("chunk", .self$colsToKeep)
+      } else {
+        cols <- .self$colsToKeep
+      }
+      setnames(dt, old = c("index", "word"), new = c("id", "token"))
+      dt[, cols, with = FALSE]
+    },
+    
     parsePrettyPrint = function(x = NULL, filename = NULL, mc = 1){
       if (is.null(x)) x <- readLines(filename)
       chunks <- cut(
@@ -164,7 +192,7 @@ CoreNLP <- setRefClass(
         c(grep("^Sentence\\s#\\d+", x), length(x)),
         include.lowest = TRUE, right = FALSE
       )
-      dts <- lapply(
+      dts <- pbapply:pblapply(
         split(x, f = chunks),
         function(chunk){
           txt <- chunk[grepl("^\\[.*\\]$", chunk)] # get lines with annotation
@@ -180,12 +208,12 @@ CoreNLP <- setRefClass(
       dts
     },
     
-    annotate = function(txt){
+    annotate = function(txt, chunk = NULL){
       anno <- rJava::.jcall(.self$tagger, "Ledu/stanford/nlp/pipeline/Annotation;", "process", txt)
       switch(.self$method,
-             xml = .self$usingXML(anno),
-             json = .self$usingJSON(anno),
-             txt = .self$usingTXT(anno)
+             xml = .self$annotationToXML(anno),
+             json = .self$annotationToJSON(anno, chunk = chunk),
+             txt = .self$annotationToTXT(anno)
              )
     }
   )

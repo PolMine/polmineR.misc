@@ -7,11 +7,10 @@
 #' library(rJava)
 #' library(pbapply)
 #' library(parallel)
+#' library(readr)
+#' library(text2vec)
 #' 
-#' options(java.parameters = "-Xmx4g")
-#' CNLP <- CoreNLP$new(method = "json", filename = "~/Lab/tmp/coreNLP.json")
-#' 
-#' filenames <- Sys.glob(sprintf("%s/*.xml", "~/Lab/gitlab/plprbtpdf_tei"))
+#' filenames <- Sys.glob(sprintf("%s/*.xml", "~/Lab/gitlab/plprbttxt_tei"))
 #' filenames <- filenames[1:2]
 #' 
 #' metadata <- c(
@@ -19,22 +18,38 @@
 #'   session = "//titleStmt/sessionNo",
 #'   date = "//publicationStmt/date"
 #' )
-#' dtList <- pblapply(filenames, function(x) xmlToDT(x, meta = metadata, mc = 1))
+#' dtList <- pblapply(filenames, function(x) xmlToDT(x, meta = metadata), cl = 10)
 #' dt <- rbindlist(dtList, fill = TRUE)
 #' rm(dtList)
+#' 
 #' dt2 <- dt[is.na(speaker)][, speaker := NULL] # remove text in speaker tag
-#' dt2[, chunk := 1:nrow(dt2)]
+#' dt2[, chunk := 1:nrow(dt2)] # add column with chunks
 #' for (x in c("div_what", "div_desc", "body", "TEI", "p")) dt2[[x]] <- NULL
 #' dt2[["stage_type"]] <- ifelse(is.na(dt2[["stage_type"]]), "speech", "interjection")
 #' rm(dt)
 #' 
+#' options(java.parameters = "-Xmx4g")
+#' CNLP <- CoreNLP$new(method = "json", filename = "~/Lab/tmp/coreNLP.json")
 #' dummy <- pbapply::pblapply(
 #'   1:nrow(dt2),
 #'   function(i) CNLP$annotate(dt2[["text"]][i], chunk = i) # add chunks for matching with metadata table
 #' )
-#' J <- readLines("~/Lab/tmp/coreNLP.json")
+#' 
+#' cores <- 10
+#' chunks <- text2vec::split_into(1:nrow(dt2), n = cores)
+#' system.time(dummy <- mclapply(
+#'   1:length(chunks),
+#'   function(i){
+#'     options(java.parameters = "-Xmx4g")
+#'     A <- CoreNLP$new(method = "json", filename = sprintf("~/Lab/tmp/coreNLP_%d.json", i))
+#'     dummy <- lapply(chunks[[i]], function(j) A$annotate(dt2[["text"]][j], chunk = j))
+#'     return( NULL )
+#'   },
+#'   mc.cores = cores
+#' ))
+#' 
 #' J <- readr::read_lines(file = "~/Lab/tmp/coreNLP.json", progress = TRUE)
-#' dts <- pbapply::pblapply(J, CNLP$parseJson)
+#' dts <- pbapply::pblapply(J, CNLP$parseJson, cl = 10) # parallelization works nicely here (?!)
 #' tokenStreamDT <- rbindlist(dts)
 #' 
 #' tokenStreamDT[, cpos := 0:(nrow(tokenStreamDT) - 1)]
@@ -70,7 +85,8 @@ CoreNLP <- setRefClass(
     append = "logical",
     method = "character",
     colsToKeep = "character",
-    destfile = "character"
+    destfile = "character",
+    logfile = "character"
     
   ),
   
@@ -81,12 +97,12 @@ CoreNLP <- setRefClass(
       method = c("txt", "json", "xml"),
       colsToKeep = c("sentence", "id", "token", "pos", "ner"),
       filename = NULL
-      ){
-
+    ){
+      
       .self$colsToKeep <- colsToKeep
       
       rJava::.jinit(force.init = TRUE) # does it harm when called again?
-
+      
       # add stanford jars to classpath
       if (is.null(stanfordDir)){
         stanfordDir <- file.path(
@@ -96,11 +112,11 @@ CoreNLP <- setRefClass(
       }
       stanfordPath <- Sys.glob(paste0(stanfordDir,"/*.jar"))
       rJava::.jaddClassPath(stanfordPath)
-
+      
       .self$method <- method
       if (.self$method == "xml") .self$xmlifier <- rJava::.jnew("edu.stanford.nlp.pipeline.XMLOutputter")
       if (.self$method == "json") .self$jsonifier <- rJava::.jnew("edu.stanford.nlp.pipeline.JSONOutputter")
-
+      
       if (is.null(propertiesFile)){
         propertiesFile <- file.path(
           system.file(package = "coreNLP", "extdata"),
@@ -108,7 +124,7 @@ CoreNLP <- setRefClass(
         )
       }
       rJava::.jaddClassPath(dirname(propertiesFile))
-
+      
       .self$tagger <- rJava::.jnew(
         "edu.stanford.nlp.pipeline.StanfordCoreNLP",
         basename(propertiesFile)
@@ -128,9 +144,9 @@ CoreNLP <- setRefClass(
           )
         }
       }
-
+      
     },
-
+    
     annotationToXML = function(anno){
       doc <- .jcall(.self$xmlifier, "Lnu/xom/Document;", "annotationToDoc", anno, .self$tagger)
       xml <- .jcall(doc, "Ljava/lang/String;", "toXML")
@@ -168,7 +184,9 @@ CoreNLP <- setRefClass(
     },
     
     parseJson = function(x){
-      dat <- jsonlite::fromJSON(x)
+      # run the parsing within try - coding issues may cause problems
+      dat <- try( jsonlite::fromJSON(x) )
+      if (is(dat)[1] == "try-error") return( NULL )
       dt <- rbindlist(
         lapply(
           1:length(dat$sentences$tokens),
@@ -208,13 +226,23 @@ CoreNLP <- setRefClass(
       dts
     },
     
-    annotate = function(txt, chunk = NULL){
+    purge = function(x){
+      replacements <- list(
+        c("\u202F", ""), # narrow no-break space
+        c("\uFFFD", "")
+      )
+      for (i in 1:length(replacements)) x <- gsub(replacements[[i]][1], replacements[[i]][2], x)
+      x
+    },
+    
+    annotate = function(txt, chunk = NULL, purge = TRUE){
+      if (purge) txt <- .self$purge(txt)
       anno <- rJava::.jcall(.self$tagger, "Ledu/stanford/nlp/pipeline/Annotation;", "process", txt)
       switch(.self$method,
              xml = .self$annotationToXML(anno),
              json = .self$annotationToJSON(anno, chunk = chunk),
              txt = .self$annotationToTXT(anno)
-             )
+      )
     }
   )
 )

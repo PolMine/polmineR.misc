@@ -1,72 +1,80 @@
 #' @examples 
 #' \dontrun{
-#' library(data.table)
-#' library(magrittr)
-#' library(xml2)
-#' library(stringi)
-#' library(rJava)
-#' library(pbapply)
-#' library(parallel)
-#' library(readr)
-#' library(text2vec)
-#' 
-#' filenames <- Sys.glob(sprintf("%s/*.xml", "~/Lab/gitlab/plprbttxt_tei"))
-#' filenames <- filenames[1:2]
-#' 
-#' metadata <- c(
-#'   lp = "//legislativePeriod",
-#'   session = "//titleStmt/sessionNo",
-#'   date = "//publicationStmt/date"
-#' )
-#' dtList <- pblapply(filenames, function(x) xmlToDT(x, meta = metadata), cl = 10)
-#' dt <- rbindlist(dtList, fill = TRUE)
-#' rm(dtList)
-#' 
-#' dt2 <- dt[is.na(speaker)][, speaker := NULL] # remove text in speaker tag
-#' dt2[, chunk := 1:nrow(dt2)] # add column with chunks
-#' for (x in c("div_what", "div_desc", "body", "TEI", "p")) dt2[[x]] <- NULL
-#' dt2[["stage_type"]] <- ifelse(is.na(dt2[["stage_type"]]), "speech", "interjection")
-#' rm(dt)
-#' 
-#' options(java.parameters = "-Xmx4g")
-#' CNLP <- CoreNLP$new(method = "json", filename = "~/Lab/tmp/coreNLP.json")
-#' dummy <- pbapply::pblapply(
-#'   1:nrow(dt2),
-#'   function(i) CNLP$annotate(dt2[["text"]][i], chunk = i) # add chunks for matching with metadata table
-#' )
-#' 
-#' cores <- 10
-#' chunks <- text2vec::split_into(1:nrow(dt2), n = cores)
-#' system.time(dummy <- mclapply(
-#'   1:length(chunks),
-#'   function(i){
-#'     options(java.parameters = "-Xmx4g")
-#'     A <- CoreNLP$new(method = "json", filename = sprintf("~/Lab/tmp/coreNLP_%d.json", i))
-#'     dummy <- lapply(chunks[[i]], function(j) A$annotate(dt2[["text"]][j], chunk = j))
-#'     return( NULL )
-#'   },
-#'   mc.cores = cores
-#' ))
-#' 
-#' J <- readr::read_lines(file = "~/Lab/tmp/coreNLP.json", progress = TRUE)
-#' dts <- pbapply::pblapply(J, CNLP$parseJson, cl = 10) # parallelization works nicely here (?!)
-#' tokenStreamDT <- rbindlist(dts)
-#' 
-#' tokenStreamDT[, cpos := 0:(nrow(tokenStreamDT) - 1)]
-#' encode(tokenStreamDT[["token"]], corpus = "FOO", pAttribute = "word", encoding = "UTF-8")
-#' encode(tokenStreamDT[["pos"]], corpus = "FOO", pAttribute = "pos")
-#' 
-#' cpos <- tokenStreamDT[,{list(cpos_left = min(.SD[["cpos"]]), cpos_right = max(.SD[["cpos"]]))}, by = "chunk"]
-#' setkeyv(cpos, cols = "chunk")
-#' setkeyv(dt2, cols = "chunk")
-#' dt3 <- dt2[cpos]
-#' options("polmineR.cwb-regedit" = FALSE)
-#' setnames(dt3, old = c("sp_party", "sp_name"), new = c("party", "name"))
-#' for (col in c("party", "name", "lp", "session", "date")){
-#'   dtEnc <- dt3[, c("cpos_left", "cpos_right", col), with = FALSE]
-#'   encode(dtEnc, corpus = "FOO", sAttribute = col)
-#' }
-#' use()
+library(data.table)
+library(magrittr)
+library(xml2)
+library(stringi)
+library(rJava)
+library(pbapply)
+library(parallel)
+library(readr)
+library(text2vec)
+
+filenames <- Sys.glob(sprintf("%s/*.xml", "~/Lab/gitlab/plprbttxt_tei"))
+filenames <- filenames[1:2]
+
+metadata <- c(
+  lp = "//legislativePeriod",
+  session = "//titleStmt/sessionNo",
+  date = "//publicationStmt/date"
+)
+dtList <- pblapply(filenames, function(x) xmlToDT(x, meta = metadata), cl = 10)
+dt <- rbindlist(dtList, fill = TRUE)
+rm(dtList)
+
+dt2 <- dt[is.na(speaker)][, speaker := NULL] # remove text in speaker tag
+dt2[, chunk := 1:nrow(dt2)] # add column with chunks
+for (x in c("div_what", "div_desc", "body", "TEI", "p")) dt2[[x]] <- NULL
+dt2[["stage_type"]] <- ifelse(is.na(dt2[["stage_type"]]), "speech", "interjection")
+rm(dt)
+
+options(java.parameters = "-Xmx4g")
+CNLP <- CoreNLP$new(method = "json", filename = "~/Lab/tmp/coreNLP.json")
+dummy <- pbapply::pblapply(
+  1:nrow(dt2),
+  function(i) CNLP$annotate(dt2[["text"]][i], chunk = i) # add chunks for matching with metadata table
+)
+
+# processing 1100 plenary protocols ~ 2h 
+cores <- 10
+chunks <- text2vec::split_into(1:nrow(dt2), n = cores)
+system.time(filenames <- mclapply(
+  1:length(chunks),
+  function(i){
+    options(java.parameters = "-Xmx4g")
+    filename <- sprintf("~/Lab/tmp/coreNLP_%d.json", i)
+    A <- CoreNLP$new(method = "json", filename = filename)
+    lapply(chunks[[i]], function(j) A$annotate(dt2[["text"]][j], chunk = j))
+    return( filename )
+  },
+  mc.cores = 10
+))
+
+# with parallelization
+J <- unlist(lapply(filenames, readr::read_lines))
+            
+# withou parallelization
+J <- readr::read_lines(file = "~/Lab/tmp/coreNLP.json", progress = TRUE)
+CNLP <- CoreNLP$new(method = "json", filename = "~/Lab/tmp/coreNLP.json")
+dts <- pbapply::pblapply(J, CNLP$parseJson, cl = 10) # parallelization works nicely here
+tokenStreamDT <- rbindlist(dts)
+
+
+tokenStreamDT[, cpos := 0:(nrow(tokenStreamDT) - 1)]
+encode(tokenStreamDT[["token"]], corpus = "FOO", pAttribute = "word", encoding = "UTF-8")
+encode(tokenStreamDT[["pos"]], corpus = "FOO", pAttribute = "pos")
+
+cpos <- tokenStreamDT[,{list(cpos_left = min(.SD[["cpos"]]), cpos_right = max(.SD[["cpos"]]))}, by = "chunk"]
+setkeyv(cpos, cols = "chunk")
+setkeyv(dt2, cols = "chunk")
+dt3 <- dt2[cpos]
+options("polmineR.cwb-regedit" = FALSE)
+setnames(dt3, old = c("sp_party", "sp_name"), new = c("party", "name"))
+for (col in c("party", "name", "lp", "session", "date")){
+  dtEnc <- dt3[, c("cpos_left", "cpos_right", col), with = FALSE]
+  encode(dtEnc, corpus = "FOO", sAttribute = col)
+}
+use()
 #' @param filename if filename is not NULL (default), the object will be initialized with
 #' a FileWriter, and new annotations will be appended
 #' @param colsToKeep character vector with names of columens of the output data.table
@@ -183,7 +191,7 @@ CoreNLP <- setRefClass(
       }
     },
     
-    parseJson = function(x){
+    parseJson = function(x, colsToKeep = c("sentence", "id", "token", "pos", "ner")){
       # run the parsing within try - coding issues may cause problems
       dat <- try( jsonlite::fromJSON(x) )
       if (is(dat)[1] == "try-error") return( NULL )
@@ -195,12 +203,12 @@ CoreNLP <- setRefClass(
       )
       if ("chunk" %in% names(dat)){
         dt[, "chunk" := dat[["chunk"]]]
-        cols <- c("chunk", .self$colsToKeep)
+        cols <- c("chunk", colsToKeep)
       } else {
-        cols <- .self$colsToKeep
+        cols <- colsToKeep
       }
       setnames(dt, old = c("index", "word"), new = c("id", "token"))
-      dt[, cols, with = FALSE]
+      dt[, colsToKeep, with = FALSE]
     },
     
     parsePrettyPrint = function(x = NULL, filename = NULL, mc = 1){
@@ -231,7 +239,9 @@ CoreNLP <- setRefClass(
         c("\u202F", ""), # narrow no-break space
         c("\uFFFD", "")
       )
-      for (i in 1:length(replacements)) x <- gsub(replacements[[i]][1], replacements[[i]][2], x)
+      for (i in 1:length(replacements)){
+        x <- gsub(replacements[[i]][1], replacements[[i]][2], x)
+      }
       x
     },
     

@@ -1,0 +1,175 @@
+---
+title: "'Ideologie' als Kampfbegriff"
+subtitle: 'Analysen auf Basis des GermaParl-Korpus (1996 - 2006)'
+author: "Andreas Blaette"
+date: "Stand: 10. Oktober 2018"
+output:
+  ioslides_presentation:
+    widescreen: yes
+  slidy_presentation: default
+editor_options:
+  chunk_output_type: console
+vignette: >
+  %\VignetteIndexEntry{Ideologie als politischer Kampfbegriff}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+```{r, echo = FALSE, message = FALSE}
+library(polmineR)
+use("GermaParl")
+library(magrittr)
+library(data.table)
+```
+
+
+```{r, echo = FALSE}
+Q <- '"Nachhaltigkeit.*"'
+```
+
+
+## Sprachliche Varianten {.smaller}
+
+```{r, echo = FALSE}
+cnt <- count("GERMAPARL", query = Q, cqp = TRUE, breakdown = TRUE)
+cnt[, "query" := NULL]
+colnames(cnt) <- c("Wortform", "Häufigkeit", "Anteil")
+DT::datatable(cnt)
+```
+
+
+## Der Sprachgebrauch der Parteien {.flexbox .vcenter}
+
+```{r, echo = FALSE}
+# p <- partition("GERMAPARL", role = c("government", "mp"), interjection = FALSE)
+
+# d <- dispersion(p, query = Q, s_attribute = "party")
+d <- dispersion("GERMAPARL", query = Q, s_attribute = "party")
+d <- d[!party %in% c("parteilos", "")]
+d <- rbind(
+  d,
+  data.table(
+    party = "PDS/LINKE",
+    count = d[party == "LINKE"][["count"]] + d[party == "PDS"][["count"]]
+    )
+)
+d <- d[!party %in% c("PDS", "LINKE")]
+setorderv(d, cols = "party")
+
+s <- size("GERMAPARL", s_attribute = "party")
+s <- rbind(
+  s,
+  data.table(
+    party = "PDS/LINKE",
+    size = s[party == "LINKE"][["size"]] + s[party == "PDS"][["size"]]
+    )
+)
+s <- s[party %in% d[["party"]]]
+setorderv(s, cols = "party")
+
+d[, "size" := s[["size"]] ]
+d[, "freq" := count / size * 100000]
+
+
+colors <- c(
+  "CDU" = "black", CSU = "blue", FDP = "yellow",
+  SPD = "red", GRUENE = "green", "PDS/LINKE" = "pink"
+  )
+
+
+par(mfrow = c(1,2))
+setorderv(d, cols = "freq", order = -1L)
+barplot(
+  height = d[["count"]], names.arg = d[["party"]], las = 2, cex.names = 0.7,
+  col = colors[d[["party"]]],
+  main = "absolute Häufigkeit"
+  )
+
+barplot(
+  height = d[["freq"]], names.arg = d[["party"]], las = 2, cex.names = 0.7,
+  col = colors[d[["party"]]],
+  main = "Anteil (pro 100.000 Worte)"
+  )
+
+```
+
+## Kookkurrenzen | alle Fraktionen, nur Nomen und Adjektive {.smaller}
+
+```{r, echo = FALSE, message = FALSE, render = knit_print}
+"GERMAPARL" %>%
+  cooccurrences(query = Q, cqp = TRUE, p_attribute = c("pos", "word")) %>%
+  subset(pos %in% c("NN", "ADJA", "ADJD")) %>%
+  subset(count_window >= 5) %>%
+  format() %>%
+  DT::datatable()
+```
+
+
+
+## Kookkurrenzen | CDU/CSU, nur Nomen und Adjektive {.smaller}
+
+```{r, echo = FALSE, message = FALSE, render = knit_print}
+partition("GERMAPARL", parliamentary_group = "CDU/CSU") %>%
+  cooccurrences(query = Q, cqp = TRUE, p_attribute = c("pos", "word")) %>%
+  subset(pos %in% c("NN", "ADJA", "ADJD")) %>%
+  subset(count_window >= 5) %>%
+  format() %>%
+  DT::datatable()
+```
+
+
+## Kookkurrenzen | FDP, nur Nomen und Adjektive {.smaller}
+
+```{r, echo = FALSE, message = FALSE, render = knit_print}
+partition("GERMAPARL", parliamentary_group = "FDP") %>%
+  cooccurrences(query = Q, cqp = TRUE, p_attribute = c("pos", "word")) %>%
+  subset(pos %in% c("NN", "ADJA", "ADJD")) %>%
+  subset(count_window >= 5) %>%
+  format() %>%
+  DT::datatable()
+```
+
+
+## Kookkurrenzen | SPD, nur Nomen und Adjektive {.smaller}
+
+```{r, echo = FALSE, message = FALSE, render = knit_print}
+partition("GERMAPARL", parliamentary_group = "SPD") %>%
+  cooccurrences(query = Q, cqp = TRUE, p_attribute = c("pos", "word")) %>%
+  subset(pos %in% c("NN", "ADJA", "ADJD")) %>%
+  subset(count_window >= 5) %>%
+  format() %>%
+  DT::datatable()
+```
+
+
+## Kookkurrenzen  | Bündnis 90/Die Grünen, nur Nomen und Adjektive {.smaller}
+
+```{r, echo = FALSE, message = FALSE, render = knit_print}
+partition("GERMAPARL", parliamentary_group = c("GRUENE")) %>%
+  cooccurrences(query = Q, cqp = TRUE, p_attribute = c("pos", "word")) %>%
+  subset(pos %in% c("NN", "ADJA", "ADJD")) %>%
+  subset(count_window >= 5) %>%
+  format() %>%
+  DT::datatable()
+```
+
+
+## Kookkurrenzen | PDS/LINKE, nur Nomen und Adjektive {.smaller}
+
+```{r, echo = FALSE, message = FALSE, render = knit_print}
+partition("GERMAPARL", parliamentary_group = c("PDS", "LINKE")) %>%
+  cooccurrences(query = Q, cqp = TRUE, p_attribute = c("pos", "word")) %>%
+  subset(pos %in% c("NN", "ADJA", "ADJD")) %>%
+  subset(count_window >= 5) %>%
+  format() %>%
+  DT::datatable()
+```
+
+
+##  Konkordanzen {.smaller}
+
+```{r, echo = FALSE, message = FALSE, render = knit_print, warning=FALSE}
+options("polmineR.pagelength" = 8)
+kwic("GERMAPARL", query = Q, s_attributes = c("date", "party", "speaker"))
+```
+

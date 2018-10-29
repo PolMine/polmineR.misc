@@ -1,0 +1,71 @@
+---
+title: "Untitled"
+author: "Andreas Blaette"
+date: "29 10 2018"
+output: html_document
+---
+  
+```{r}
+library(polmineR)
+library(Matrix)
+library(text2vec)
+library(proxy)
+library(data.table)
+library(magrittr)
+```
+
+```{r}
+use("GermaParl")
+```
+
+```{r}
+stopwords <- unname(unlist(noise(terms("GERMAPARL", p_attribute = "word"), stopwordsLanguage = "de")))
+```
+
+```{r}
+C <- Cooccurrences$new(x = "GERMAPARL", p_attribute = "word", window = 5L, drop = stopwords, verbose = TRUE)
+C$count()
+```
+
+```{r}
+tcm <- C$as.simple_triplet_matrix() # less than 10 seconds
+tcm <- as.sparseMatrix(tcm)
+tcm_dgt <- as(tcm, "dgTMatrix")
+```
+
+
+```{r}
+GV <- GloVe$new(
+  word_vectors_size = 50, vocabulary = rownames(tcm_dgt),
+  x_max = 10, learning_rate = .1
+) # in example learning_rate .25
+```
+
+```{r}
+GV$fit_transform(x = tcm_dgt, n_iter = 25)
+glove_word_vectors <- GV$components
+```
+
+```{r}
+wordcount <- count("GERMAPARL", p_attribute = "word") %>% as.data.table()
+```
+
+```{r}
+get_semantic_field <- function(query, n = 50, cnt = wordcount, word_vectors = glove_word_vectors){
+  query_vector <- matrix(word_vectors[,query], nrow = 1L)
+  similarities <- proxy::simil(x = t(word_vectors), y = query_vector, method = "cosine")
+  similarities_dt <- data.table(word = rownames(similarities), cosine = similarities[,1])
+  setkeyv(similarities_dt, cols = "word")
+  if (is.null(key(cnt))) setkeyv(cnt, cols = "word")
+  similarities_dt <- cnt[similarities_dt]
+  setorderv(similarities_dt, cols = "cosine", order = -1L)
+  similarities_dt <- similarities_dt[2L:nrow(similarities_dt),]
+  if (!is.null(n)) similarities_dt <- head(similarities_dt, n = n)
+  similarities_dt
+}
+```
+
+
+```{r}
+get_semantic_field(query = "Nachhaltigkeit", n = 25)
+``

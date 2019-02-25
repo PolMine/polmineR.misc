@@ -3,6 +3,8 @@ title: "Untitled"
 author: "Andreas Blaette"
 date: "29 10 2018"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
   
 ```{r}
@@ -67,5 +69,6 @@ get_semantic_field <- function(query, n = 50, cnt = wordcount, word_vectors = gl
 
 
 ```{r}
-get_semantic_field(query = "Nachhaltigkeit", n = 25)
-``
+get_semantic_field(query = "Asylsuchende", n = 25)
+```
+

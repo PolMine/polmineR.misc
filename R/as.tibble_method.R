@@ -41,7 +41,7 @@ setMethod("as.tibble", "partition", function(.Object, pAttribute){
 #' colnames(Y)[5] <- "fulltext"
 #' }
 #' @rdname as.tibble
-setMethod("as.tibble", "partitionBundle", function(.Object, pAttribute, mc = getOption("polmineR.mc")){
+setMethod("as.tibble", "partition_bundle", function(.Object, pAttribute, mc = getOption("polmineR.mc")){
   if (mc == FALSE) mc <- 1
   Ts <- pblapply(
     .Object@objects,

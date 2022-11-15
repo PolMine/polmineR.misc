@@ -1,8 +1,8 @@
 Package: polmineR.misc
 Type: Package
 Title: polmineR.misc
-Version: 0.1.8
-Date: 2017-06-01
+Version: 0.1.8.9001
+Date: 2022-11-15
 Author: Andreas Blaette
 Maintainer: Andreas Blaette <andreas.blaette@uni-due.de>
 Imports:
@@ -12,20 +12,20 @@ Imports:
     slam,
     bigmemory,
     bigalgebra,
-    bigpca,
     data.table,
     proxy,
     knitr,
     pbapply,
     rJava
 VignetteBuilder: knitr
-LazyData: yes
 Description: miscellaneaous extensions for the polmineR base package
 License: GPL-3
 Collate:
     'polmineR.misc_package.R'
     'Duplicates_class.R'
     'Hitanalysis_class.R'
+    'SentenceSimilarity.R'
+    'Word2Vec.R'
     'as.dfm_method.R'
     'as.svmlight_method.R'
     'as.tibble_method.R'
@@ -34,6 +34,7 @@ Collate:
     'cosine_similarity_method.R'
     'ctm_method.R'
     'distance_method.R'
+    'divide_method.R'
     'egoNetwork_method.R'
     'hunspell_method.R'
     'label_method.R'
@@ -44,5 +45,5 @@ Collate:
     'store_method.R'
     'validate_method.R'
     'virtualMatrixClass.R'
-    'divide_method.R'
-RoxygenNote: 5.0.1
+RoxygenNote: 7.2.2
+Roxygen: list(markdown = TRUE)

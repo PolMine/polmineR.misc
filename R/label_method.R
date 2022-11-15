@@ -1,6 +1,6 @@
 #' assign labels
 #' 
-#' @param .Object an object of class \code{"partitionBundle"}
+#' @param .Object an object of class `partition_bundle`
 #' @param labels labels to assign
 #' @param description output
 #' @param logfile a file 
@@ -19,7 +19,7 @@
 setGeneric("label", function(.Object, ...) standardGeneric("label"))
 
 #' @rdname label-method
-setMethod("label", "partitionBundle", function(.Object, labels=c(true=1, false=0), description="Make your choice", logfile=NULL, resume=FALSE, ...){
+setMethod("label", "partition_bundle", function(.Object, labels=c(true=1, false=0), description="Make your choice", logfile=NULL, resume=FALSE, ...){
   retval <- list()
   labels <- c(setNames(as.character(labels), names(labels)), quit="quit")
   for (i in c(1:length(.Object@objects))){

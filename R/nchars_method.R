@@ -35,7 +35,7 @@ setMethod("nchars", "partition", function(x, pAttribute="word", regexCharsToKeep
 })
 
 #' @rdname nchars
-setMethod("nchars", "partitionBundle", function(x, decreasing = TRUE, mc = FALSE, progress = TRUE, ...){
+setMethod("nchars", "partition_bundle", function(x, decreasing = TRUE, mc = FALSE, progress = TRUE, ...){
   .Object <- x
   partitionCount <- blapply(.Object@objects, f = nchars, mc = mc, progress = progress, ...)
 #   if (mc == FALSE){

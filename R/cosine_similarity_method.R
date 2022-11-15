@@ -78,20 +78,20 @@ setMethod("cosine_similarity", "matrix", function(x, how = c("proxy", "coop", "a
 
 #' @import bigmemory
 #' @import bigalgebra
-#' @importFrom bigpca big.t
 #' 
 setMethod("cosine_similarity", "big.matrix", function(x){
-  M_transposed <- big.t(x)
-  cp <- x %*% M_transposed
-  diag <- sapply(1:ncol(cp), function(i) cp[i,i])
-  rtdg <- sqrt(diag)
-  tcross <- as.big.matrix(matrix(rtdg, ncol = 1)) %*% as.big.matrix(matrix(rtdg, nrow = 1))
-  pbapply::pblapply(
-    1:nrow(cp),
-    function(i) cp[i,] <- cp[i,] / tcross[i,] 
-  )
-  options(bigmemory.allow.dimnames = TRUE)
-  rownames(cp) <- rownames(x)
-  colnames(cp) <- rownames(x)
-  cp
+  stop("defunct as bigpca pkg is not available any more")
+  # M_transposed <- bigpca::big.t(x) 
+  # cp <- x %*% M_transposed
+  # diag <- sapply(1:ncol(cp), function(i) cp[i,i])
+  # rtdg <- sqrt(diag)
+  # tcross <- as.big.matrix(matrix(rtdg, ncol = 1)) %*% as.big.matrix(matrix(rtdg, nrow = 1))
+  # pbapply::pblapply(
+  #   1:nrow(cp),
+  #   function(i) cp[i,] <- cp[i,] / tcross[i,] 
+  # )
+  # options(bigmemory.allow.dimnames = TRUE)
+  # rownames(cp) <- rownames(x)
+  # colnames(cp) <- rownames(x)
+  # cp
 })

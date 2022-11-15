@@ -16,27 +16,29 @@ NULL
 #' be considered the duplicate; (b) if two similar articles were published on different days,
 #' the article that appeared later will be considered the duplicate.
 #' 
-#' Different \code{partitionBundle}-objects can be passed into the \code{detectDuplicates}-method successively. The field
+#' Different `partition_bundle`-objects can be passed into the \code{detectDuplicates}-method successively. The field
 #' \code{duplicates} will be appended by the duplicates that are newly detected. 
 #' 
-#' @field corpus the CWB corpus the (last) \code{partitionBundle} used describes
+#' @field corpus the CWB corpus the (last) `partition_bundle` used describes
 #' @field charRegex regex defining the characters to keep
-#' @field charCount count of the characters in the \code{partitionBundle}
+#' @field charCount count of the characters in the `partition_bundle`
 #' @field number of days before and after a document was published
 #' @field pAttribute the p-attribute used (defaults to "word")
 #' @field sAttribute the s-attribute of the date of a text in the corpus
-#' @field sample size of the sample of the \code{partitionBundle} that the character count is based on
+#' @field sample size of the sample of the `partition_bundle` that the character count is based on
 #' @field threshold minimum similarity value to identify two texts as duplicates
 #' @field whatToCompare  a \code{simple_triplet_matrix} with the texts to be compared
 #' @field similarityMatrix a \code{simple_triplet_matrix} with similarities of texts
-#' @field ngramDocumentMatrix a matrix (inheriting from \code{TermDocumentMatrix}) with ngram counts in the documents of the \code{partitionBundle}
+#' @field ngramDocumentMatrix a matrix (inheriting from \code{TermDocumentMatrix}) with ngram counts in the documents of the `partition_bundle`
 #' @field datePrep function to rework dates if not in the DD-MM-YYYY standard format
 #' @field annotation a \code{data.table} with corpus positions
 #' 
-#' @param x a \code{"partitionBundle"} object defining the documents that will be compared to detect duplicates
+#' @param x a `partition_bundle` object defining the documents that will be
+#'   compared to detect duplicates
 #' @param charRegex a regex defining the characters to keep
 #' @param sAttribute the s-attribute providing the date
-#' @param sample number of documents to define a subset of \code{partitionBundle} to speed up character count
+#' @param sample number of documents to define a subset of `partition_bundle` to
+#'   speed up character count
 #' @param n number of days before and after a document was published
 #' @param threshold numeric (0 < x < 1), the minimum similarity to qualify two documents as duplicates
 #' @param mc logical, whether to use multicore
@@ -44,7 +46,7 @@ NULL
 #' @param progress logical, whether to show progress bar
 #' @examples 
 #' \dontrun{
-#' foo <- partitionBundle(
+#' foo <- partition_bundle(
 #'   "KEYWORDS",
 #'   def = list(text_newspaper="guardian"),
 #'   var=list(text_id=sAttributes("KEYWORDS", "text_id")[1:500]),

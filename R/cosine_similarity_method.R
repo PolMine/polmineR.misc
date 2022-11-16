@@ -29,7 +29,7 @@ setMethod("cosine_similarity", "numeric", function(x, y){
 setMethod("cosine_similarity", "TermDocumentMatrix", function(x, y = NULL, progress = TRUE, verbose = TRUE, mc = FALSE){
 
   if (is.null(y)){
-    combinations <- utils::combn(1:ncol(x), 2)
+    combinations <- utils::combn(1L:ncol(x), 2)
     y <- slam::simple_triplet_matrix(
       i = combinations[1,],
       j = combinations[2,],
@@ -41,7 +41,7 @@ setMethod("cosine_similarity", "TermDocumentMatrix", function(x, y = NULL, progr
   if (verbose) message("... calculating similarities")
   
   cosine_values <- pbapply::pblapply(
-    1:length(y$i),
+    1L:length(y$i),
     FUN = function(i) cosine_similarity(as.vector(x[, y$i[i]]), as.vector(x[, y$j[i]])),
     cl = mc
   )

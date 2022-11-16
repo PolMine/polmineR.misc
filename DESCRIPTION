@@ -17,7 +17,8 @@ Imports:
     tibble,
     dplyr,
     methods,
-    RcppCWB
+    RcppCWB,
+    cli
 Description: Miscellaneaous extensions for the polmineR base package.
 Encoding: UTF-8
 License: GPL-3

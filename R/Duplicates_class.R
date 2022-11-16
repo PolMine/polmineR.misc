@@ -44,16 +44,6 @@ NULL
 #' @param mc logical, whether to use multicore
 #' @param verbose logical, whether to be verbose
 #' @param progress logical, whether to show progress bar
-#' @examples 
-#' \dontrun{
-#' foo <- partition_bundle(
-#'   "KEYWORDS",
-#'   def = list(text_newspaper="guardian"),
-#'   var=list(text_id=sAttributes("KEYWORDS", "text_id")[1:500]),
-#'   pAttribute=NULL
-#'  )
-#' doubled <- duplicates(foo)
-#' }
 #' @export Duplicates
 #' @exportClass Duplicates
 #' @rdname Duplicates
@@ -61,7 +51,39 @@ NULL
 #' @importFrom pbapply pblapply
 #' @importFrom stats setNames
 #' @importFrom RcppCWB get_region_matrix
+#' @importFrom cli cli_progress_step
 #' @import data.table
+#' @examples
+#' \dontrun{
+#' library(polmineR.misc)
+#' library(polmineR)
+#' library(pbapply)
+#' library(slam)
+#' 
+#' coi <- "NADIRASZ"
+#' s_attr_date <- "article_date"
+#' 
+#' D <- Duplicates$new(
+#'   charRegex = "[a-zA-ZäöüÄÖÜ]",
+#'   pAttribute = "word",
+#'   sAttribute = s_attr_date,
+#'   datePrep = NULL,
+#'   sample = 100L,
+#'   n = 1L,
+#'   threshold = 0.6 # default is 0.9
+#' )
+#' 
+#' set.seed(132)
+#' sample_days <- s_attributes(coi, s_attr_date)[1:5]
+#' 
+#' article_bundle <- corpus(coi) |>
+#' subset(article_date %in% sample_days) |> 
+#'   split(s_attribute = "article_id")
+#' 
+#' # results in 3500 elements
+#' 
+#' D$detectDuplicates(x = article_bundle, mc = 3L)
+#' }
 Duplicates <- setRefClass(
   
   "Duplicates",
@@ -107,18 +129,22 @@ Duplicates <- setRefClass(
       if (!.self$sAttribute %in% sAttributes(.self$corpus)){
         stop("no valid s-attribute in field 'sAttribute'")
       }
-      if (requireNamespace("chron", quietly = TRUE)){
-        message("... required package 'chron' is available")
-      } else {
+      
+      if (!requireNamespace("chron", quietly = TRUE)){
         stop("the 'chron'-package needs to be installed but is not available")
       }
+      
       if (verbose) message("... getting docs to be compared")
       dates <- unlist(lapply(setNames(x@objects, names(x)), function(y) sAttributes(y, .self$sAttribute)))
       if (!is.null(.self$datePrep)) dates <- sapply(dates, .self$datePrep)
       objectSplittedByDate <- split(1:length(x), f = dates)
       .getWhatToCompare <- function(i){
         dateOfDoc <- try(as.POSIXct(unname(dates[i])))
-        if (is(dateOfDoc)[1] == "try-error") return(NULL)
+        if (is(dateOfDoc)[1] == "try-error"){
+          warning(paste("cannot parse date:", dates[i]))
+          return(NULL)
+        }
+        
         if (.self$n > 0){
           dateRange <- chron::seq.dates(
             from = strftime(dateOfDoc - 1 - (.self$n - 1) * 86400, format = "%m/%d/%Y"),
@@ -161,18 +187,18 @@ Duplicates <- setRefClass(
       )
       dates <- sapply(dates, .self$datePrep)
       indexDuplicates <- which(.self$similarityMatrix$v >= .self$threshold)
-      if (length(indexDuplicates) > 0){
+      if (length(indexDuplicates) > 0L){
         # keep only those values in similarity matrix that are above the threshold
         for (what in c("i", "j", "v")) .self$similarityMatrix[[what]] <- .self$similarityMatrix[[what]][indexDuplicates]  
         duplicateList <- lapply(
-          c(1:length(.self$similarityMatrix$i)),
+          1L:length(.self$similarityMatrix$i),
           function(i){
             iName <- .self$similarityMatrix$dimnames[[1]][.self$similarityMatrix$i[i]]
             jName <- .self$similarityMatrix$dimnames[[1]] [.self$similarityMatrix$j[i]]
             iDate <- as.POSIXct(dates[[iName]])
-            iSize <- x@objects[[iName]]@size
+            iSize <- x@objects[iName][[1]]@size
             jDate <- as.POSIXct(dates[[jName]])
-            jSize <- x@objects[[jName]]@size
+            jSize <- x@objects[jName][[1]]@size
             value <- .self$similarityMatrix$v[i]
             if(iDate == jDate){
               if (iSize >= jSize){
@@ -198,6 +224,7 @@ Duplicates <- setRefClass(
       }
     },
     
+    #' @param x A `partition_bundle` or `subcorpus_bundle` object.
     #' @param n The number of characters to use for shingling (`integer` value),
     #'   passed as argument `n` into `polmineR::ngrams()`. Defaults to 5, in 
     #'   line with Kliche et al. 2014: 695.
@@ -207,47 +234,52 @@ Duplicates <- setRefClass(
     detectDuplicates = function(x, n = 5L, character_selection = 1:12, verbose = TRUE, mc = FALSE, progress = TRUE){
       
       "Wrapper that implements the entire workflow for duplicate detection."
-      
+
       .self$corpus <- unique(sapply(x@objects, function(x) x@corpus))
-      stopifnot(length(.self$corpus) == 1)
-      if (verbose) message("... counting characters")
+      stopifnot(length(.self$corpus) == 1L)
+      
+      if (verbose) cli_progress_step("counting characters")
       if (is.numeric(.self$sample)){
-        bundleSample <- sample(x, size = .self$sample)
-        nChars <- nchars(
-          bundleSample, pAttribute = .self$pAttribute, regexCharsToKeep = .self$charRegex,
+        bundle_sample <- sample(x, size = .self$sample)
+        charcount <- nchars(
+          bundle_sample, pAttribute = .self$pAttribute, regexCharsToKeep = .self$charRegex,
           toLower = TRUE, decreasing = FALSE,
           mc = FALSE, progress = progress
         )
-        rm(bundleSample)
+        rm(bundle_sample)
       } else {
-        nChars <- nchars(
+        charcount <- nchars(
           x, .self$pAttribute, regexCharsToKeep = .self$charRegex, toLower = TRUE, decreasing = FALSE,
           mc = FALSE, progress = progress
         )
       }
-      .self$charCount <- setNames(as.numeric(nChars), names(nChars))
-      if (verbose) message("... preparing ngram matrix")
-      ngramBundle <- ngrams(x, n = n, char = names(.self$charCount[character_selection]), mc = mc, progress = progress)
-      .self$ngramDocumentMatrix <- as.TermDocumentMatrix(ngramBundle, col = "count")
-      .self$ngramDocumentMatrix <- weigh(.self$ngramDocumentMatrix, method = "tfidf")
+      .self$charCount <- setNames(as.numeric(charcount), names(charcount))
       
+      if (verbose) cli_progress_step("get data for ngram matrix")
+      ngram_bundle <- ngrams(x, n = n, char = names(.self$charCount[character_selection]), mc = mc, progress = progress)
+      
+      if (verbose) cli_progress_step("assemble ngram matrix")
+      .self$ngramDocumentMatrix <- as.TermDocumentMatrix(ngram_bundle, col = "count") |>
+        weigh(method = "tfidf")
+
       if (.self$n == 0){
-        if (verbose) message("... getting dates, using s-attribute ", .self$sAttribute)
+        if (verbose) cli_progress_step(paste("getting dates, using s-attribute", .self$sAttribute))
         dates <- pblapply(x@objects, function(P) sAttributes(P, .self$sAttribute))
         groups <- split(x = names(dates), f = as.factor(unname(unlist(dates))))
         # drop groups with only one id (nothing to compare)
         for (i in rev(unname(which(sapply(groups, length) <= 1)))) groups[[i]] <- NULL
-          
+        
+        if (verbose) cli_progress_step("compute similarities")
         Ms <- pblapply(
           groups,
           function(ids){
             M <- as.matrix(.self$ngramDocumentMatrix[,ids])
-            emptyRows <- unname(which(rowSums(M) == 0))
-            if (length(emptyRows) > 0) M <- M[-emptyRows,]
+            empty_rows <- unname(which(rowSums(M) == 0))
+            if (length(empty_rows) > 0L) M <- M[-empty_rows,]
             C <- cosine_similarity(x = t(M), how = "proxy")
             dt <- data.table(melt(as.matrix(C), variable.factor = FALSE))
-            aIsB <- which(ifelse(dt[["Var1"]] == dt[["Var2"]], TRUE, FALSE) == TRUE)
-            if (length(aIsB) > 0) dt <- dt[-aIsB]
+            a_is_b <- which(ifelse(dt[["Var1"]] == dt[["Var2"]], TRUE, FALSE) == TRUE)
+            if (length(a_is_b) > 0L) dt <- dt[-a_is_b]
             dt
           }
         )
@@ -255,27 +287,28 @@ Duplicates <- setRefClass(
         # factors in columns - turn it into character vectors
         for (col in c("Var1", "Var2")) simDT[[col]] <- as.character(simDT[[col]])
         ids <- unique(c(simDT[["Var1"]], simDT[["Var2"]]))
-        newIndex <- setNames(1:length(ids), ids)
-        simDT[["i"]] <- unname( newIndex[ simDT[["Var1"]] ] )
-        simDT[["j"]] <- unname( newIndex[ simDT[["Var2"]] ] )
+        index_new <- setNames(1L:length(ids), ids)
+        simDT[["i"]] <- unname( index_new[ simDT[["Var1"]] ] )
+        simDT[["j"]] <- unname( index_new[ simDT[["Var2"]] ] )
         # keep only one similarity score per pair
         # simDTmin <- simDT[which(ifelse(simDT[["i"]] < simDT[["j"]], TRUE, FALSE) == TRUE)]
         .self$similarityMatrix <- simple_triplet_matrix(
           i = simDT[["i"]], j = simDT[["j"]], v = simDT[["value"]],
-          dimnames = list(names(newIndex), names(newIndex))
+          dimnames = list(names(index_new), names(index_new))
           )
       } else {
-        if (verbose) message("... identifying comparables")
+        if (verbose) cli_progress_step("identifying comparables")
         .self$whatToCompare <- .self$getWhatToCompare(x = x, verbose = verbose, mc = mc, progress = progress)
-        if (verbose) message("... calculating cosine similarity")
+        
+        if (verbose) cli_progress_step("calculating cosine similarity")
         .self$similarityMatrix <- cosine_similarity(
           x = .self$ngramDocumentMatrix, y = .self$whatToCompare,
           mc = mc, progress = progress
         )
-        if (verbose) message("... preparing data.table")
         # here: If duplicates slot not empty, add rows
-        
       }
+      
+      if (verbose) cli_progress_step("preparing data.table")
       newDuplicateDT <- .self$makeDuplicateDataTable(x = x, mc = mc, verbose = verbose, progress = TRUE)
       if (is.null(.self$duplicates)){
         .self$duplicates <- newDuplicateDT
@@ -283,7 +316,6 @@ Duplicates <- setRefClass(
         if (verbose) message("... data.table with duplicates alread present, appending new results")
         .self$duplicates <- rbind(.self$duplicates, newDuplicateDT)
       }
-      if (verbose) message("FINISHED")
     },
     
     makeAnnotation = function(sAttributeID){

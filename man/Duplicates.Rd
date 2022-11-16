@@ -6,9 +6,6 @@
 \alias{Duplicates}
 \title{Detect Duplicates}
 \arguments{
-\item{x}{a \code{partition_bundle} object defining the documents that will be
-compared to detect duplicates}
-
 \item{charRegex}{a regex defining the characters to keep}
 
 \item{sAttribute}{the s-attribute providing the date}
@@ -23,6 +20,8 @@ speed up character count}
 \item{verbose}{logical, whether to be verbose}
 
 \item{progress}{logical, whether to show progress bar}
+
+\item{x}{A \code{partition_bundle} or \code{subcorpus_bundle} object.}
 
 \item{n}{The number of characters to use for shingling (\code{integer} value),
 passed as argument \code{n} into \code{polmineR::ngrams()}. Defaults to 5, in
@@ -130,5 +129,35 @@ foo <- partition_bundle(
   pAttribute=NULL
  )
 doubled <- duplicates(foo)
+}
+\dontrun{
+library(polmineR.misc)
+library(polmineR)
+library(pbapply)
+library(slam)
+
+coi <- "NADIRAFAZ"
+s_attr_date <- "article_date"
+
+D <- Duplicates$new(
+  charRegex = "[a-zA-ZäöüÄÖÜ]",
+  pAttribute = "word",
+  sAttribute = s_attr_date,
+  datePrep = NULL,
+  sample = 1000L,
+  n = 1L,
+  threshold = 0.6 # default is 0.9
+)
+
+set.seed(132)
+sample_days <- sample(s_attributes(coi, s_attr_date), 10) # only use a small part of the corpus 
+
+article_bundle <- corpus(coi) |>
+subset(article_date \%in\% sample_days) |> 
+  split(s_attribute = "article_id")
+
+# results in 3500 elements
+
+D$detectDuplicates(x = article_bundle, mc = 3L)
 }
 }

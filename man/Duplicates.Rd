@@ -16,8 +16,6 @@ compared to detect duplicates}
 \item{sample}{number of documents to define a subset of \code{partition_bundle} to
 speed up character count}
 
-\item{n}{number of days before and after a document was published}
-
 \item{threshold}{numeric (0 < x < 1), the minimum similarity to qualify two documents as duplicates}
 
 \item{mc}{logical, whether to use multicore}
@@ -25,6 +23,14 @@ speed up character count}
 \item{verbose}{logical, whether to be verbose}
 
 \item{progress}{logical, whether to show progress bar}
+
+\item{n}{The number of characters to use for shingling (\code{integer} value),
+passed as argument \code{n} into \code{polmineR::ngrams()}. Defaults to 5, in
+line with Kliche et al. 2014: 695.}
+
+\item{Numeric/integer}{vector used for indexing \verb{$charCount} to select
+the characters to keep. Defaults to 1:12, in line with Kliche et al.
+2014: 695.}
 }
 \description{
 Class for duplicate detection.
@@ -76,7 +82,14 @@ Different \code{partition_bundle}-objects can be passed into the \code{detectDup
 \section{Methods}{
 
 \describe{
-\item{\code{detectDuplicates(x, verbose = TRUE, mc = FALSE, progress = TRUE)}}{Wrapper that implements the entire workflow for duplicate detection.}
+\item{\code{detectDuplicates(
+  x,
+  n = 5L,
+  character_selection = 1:12,
+  verbose = TRUE,
+  mc = FALSE,
+  progress = TRUE
+)}}{Wrapper that implements the entire workflow for duplicate detection.}
 
 \item{\code{encode(
   exec = FALSE,

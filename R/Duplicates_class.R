@@ -197,7 +197,13 @@ Duplicates <- setRefClass(
       }
     },
     
-    detectDuplicates = function(x, verbose = TRUE, mc = FALSE, progress = TRUE){
+    #' @param n The number of characters to use for shingling (`integer` value),
+    #'   passed as argument `n` into `polmineR::ngrams()`. Defaults to 5, in 
+    #'   line with Kliche et al. 2014: 695.
+    #' @param character_selection Numeric/integer vector used for indexing
+    #'   `$charCount` to select the characters to keep. Defaults to 1:12, in
+    #'   line with Kliche et al. 2014: 695.
+    detectDuplicates = function(x, n = 5L, character_selection = 1:12, verbose = TRUE, mc = FALSE, progress = TRUE){
       
       "Wrapper that implements the entire workflow for duplicate detection."
       
@@ -220,7 +226,7 @@ Duplicates <- setRefClass(
       }
       .self$charCount <- setNames(as.numeric(nChars), names(nChars))
       if (verbose) message("... preparing ngram matrix")
-      ngramBundle <- ngrams(x, n = 4, char = names(.self$charCount[1:10]), mc = mc, progress = progress)
+      ngramBundle <- ngrams(x, n = n, char = names(.self$charCount[character_selection]), mc = mc, progress = progress)
       .self$ngramDocumentMatrix <- as.TermDocumentMatrix(ngramBundle, col = "count")
       .self$ngramDocumentMatrix <- weigh(.self$ngramDocumentMatrix, method = "tfidf")
       

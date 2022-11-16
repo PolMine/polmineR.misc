@@ -1,3 +1,9 @@
+## v0.1.9.9001 
+
+* Method `Duplicates$detectDuplicates()` now has arguments `n` (passed into 
+polmineR::ngrams) and `character_selection`. Values were hard-coded previously.
+Default values are aligned with Kliche et al. 2014.
+
 ## v0.1.9
 
 * `partition_bundle` replaces `partitionBundle` in code and documentation (#9).

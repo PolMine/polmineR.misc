@@ -3,6 +3,7 @@
 #' A story to be told.
 #' 
 #' @importFrom R6 R6Class
+#' @importFrom utils select.list
 #' @rdname Hitanalysis
 #' @aliases Hitanalysis
 Hitanalysis <- R6Class(

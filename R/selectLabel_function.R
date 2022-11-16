@@ -2,22 +2,19 @@
 #' 
 #' Select label from data.frame!
 #' 
-#' @param categories a \code{data.frame} with cols category_no, and, optionally, subcategory_logical, and subcategory_no
-#' @param descriptionCol character vector
+#' @param x Story to be told.
+#' @param labelCol Column to use for labelling.
 #' @export selectLabel
 selectLabel <- function(x, labelCol = "label"){
   if("is_subcategory" %in% colnames(x)){
     categorySelected <- select.list(
-      choices = subset(x, is_subcategory == FALSE)[,labelCol]
+      choices = x[x[["is_subcategory"]] == FALSE, labelCol]
       )
     if (categorySelected == ""){
       return(NULL)
     } else {
       categorySelectedNo <- x[which(x[[labelCol]] == categorySelected), "category_no"]
-      subcategoryOptions <- subset(
-        x,
-        category_no == categorySelectedNo & is_subcategory == TRUE
-      )[,labelCol]
+      subcategoryOptions <- x[x[["category_no"]] == categorySelectedNo & x[["is_subcategory"]] == TRUE, labelCol]
       if (length(subcategoryOptions) > 0){
         label <- select.list(choices = subcategoryOptions)
         # subcategoryRowNo <- which(x[[labelCol]] == subcategorySelected)

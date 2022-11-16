@@ -4,6 +4,8 @@
 \alias{cosine_similarity}
 \alias{cosine_similarity,numeric-method}
 \alias{cosine_similarity,TermDocumentMatrix-method}
+\alias{cosine_similarity,matrix-method}
+\alias{cosine_similarity,big.matrix-method}
 \title{Calculate cosine similarity.}
 \usage{
 cosine_similarity(x, ...)
@@ -11,8 +13,21 @@ cosine_similarity(x, ...)
 \S4method{cosine_similarity}{numeric}(x, y)
 
 \S4method{cosine_similarity}{TermDocumentMatrix}(x, y = NULL, progress = TRUE, verbose = TRUE, mc = FALSE)
+
+\S4method{cosine_similarity}{matrix}(
+  x,
+  how = c("proxy", "coop", "algebra"),
+  chunks = 1,
+  progress = TRUE,
+  verbose = TRUE,
+  mc = FALSE
+)
+
+\S4method{cosine_similarity}{big.matrix}(x)
 }
 \arguments{
+\item{x}{A matrix.}
+
 \item{...}{further parameters (for use with blapply)}
 
 \item{y}{simple triplet matrix}
@@ -23,9 +38,9 @@ cosine_similarity(x, ...)
 
 \item{mc}{logical, or if numeric, providing number of cores}
 
-\item{tool}{}
+\item{how}{The tool/package chosen.}
 
-\item{method}{defaults to "cosine", no other method is implemented}
+\item{chunks}{Number of chunks (numeric/integer value).}
 }
 \description{
 Calculate cosine similarity of two vectors.

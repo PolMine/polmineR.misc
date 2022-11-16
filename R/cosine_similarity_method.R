@@ -2,10 +2,11 @@
 #' 
 #' Calculate cosine similarity of two vectors.
 #' Note: Much faster for pairwise comparisons than proxy::simil.
+#' @param x A matrix.
+#' @param how The tool/package chosen.
+#' @param chunks Number of chunks (numeric/integer value).
 #' @param y matrix from which the values are taken
 #' @param y simple triplet matrix
-#' @param tool 
-#' @param method defaults to "cosine", no other method is implemented
 #' @param progress logical
 #' @param verbose logical
 #' @param mc logical, or if numeric, providing number of cores
@@ -53,6 +54,7 @@ setMethod("cosine_similarity", "TermDocumentMatrix", function(x, y = NULL, progr
 
 # setMethod("cosine_similarity", "TermDocumentMatrix", function(x, ...) callNextMethod())
 
+#' @rdname cosine_similarity
 setMethod("cosine_similarity", "matrix", function(x, how = c("proxy", "coop", "algebra"), chunks = 1, progress = TRUE, verbose = TRUE, mc = FALSE){
   stopifnot(how %in% c("proxy", "coop", "algebra"))
   if (how == "proxy"){
@@ -78,7 +80,7 @@ setMethod("cosine_similarity", "matrix", function(x, how = c("proxy", "coop", "a
 
 #' @import bigmemory
 #' @import bigalgebra
-#' 
+#' @rdname cosine_similarity
 setMethod("cosine_similarity", "big.matrix", function(x){
   stop("defunct as bigpca pkg is not available any more")
   # M_transposed <- bigpca::big.t(x) 

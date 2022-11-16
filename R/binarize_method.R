@@ -11,6 +11,9 @@ NULL
 #' @param top an integer value, the n values with the highes values that will be TRUE
 #' @param reduce logical, whether to drop row labels of a simple_triplet_matrix with no TRUE value in the matrix
 #' @param verbose logical
+#' @param progress A `logical` value.
+#' @param mc Whether to use multicore, passed into `blapply()`.
+#' @param ... Further arguments (unused).
 #' @rdname binarize
 #' @exportMethod binarize
 setGeneric("binarize", function(.Object, ...) standardGeneric("binarize"))
@@ -21,7 +24,7 @@ setMethod("binarize", "simple_triplet_matrix", function(.Object, top, reduce = T
   vList <- split(.Object$v, .Object$j)
   if (verbose) message("... creating indices")
   indices <- blapply(
-    c(1:length(vList)),
+    1L:length(vList),
     function(i, ...) order(vList[[i]], decreasing = T)[1:top],
     mc = mc, progress = progress, verbose = FALSE
     )

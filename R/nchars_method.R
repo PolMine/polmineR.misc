@@ -1,7 +1,7 @@
 #' Count the number of characters
 #' 
-#' @param .Object object
-#' @param pAttribute the p-attribute
+#' @param x Object to process.
+#' @param progress A `logical` value.
 #' @param regexCharsToKeep if not NULL, a regex
 #' @param toLower whether to lower tokens
 #' @param mc logical
@@ -14,8 +14,7 @@ setGeneric("nchars", function(x, ...) standardGeneric("nchars"))
 
 #' count characters
 #' 
-#' @param .Object object
-#' @param pAttribute the p-attribute
+#' @param p_attribute the p-attribute
 #' @param regexCharsToKeep if NULL, counts for all charactrs will be returned, else a regex indicating which characters to include in the counting
 #' @param toLower whether to lower tokens
 #' @param mc logical
@@ -23,15 +22,15 @@ setGeneric("nchars", function(x, ...) standardGeneric("nchars"))
 #' @param decreasing logical, passed into order call 
 #' @exportMethod nchars
 #' @rdname nchars
-setMethod("nchars", "partition", function(x, pAttribute="word", regexCharsToKeep="[a-zA-Z]", toLower=TRUE, decreasing=TRUE, ...){
+setMethod("nchars", "partition", function(x, p_attribute = "word", regexCharsToKeep = "[a-zA-Z]", toLower = TRUE, decreasing = TRUE, ...){
   .Object <- x
-  charSoup <- getTokenStream(.Object, pAttribute=pAttribute, collapse="")
-  if ( toLower == TRUE ) charSoup <- tolower(charSoup)
+  charSoup <- get_token_stream(.Object, p_attribute = p_attribute, collapse = "")
+  if (isTRUE(toLower)) charSoup <- tolower(charSoup)
   charCount <- table(unlist(strsplit(charSoup, "")))
   if(!is.null(regexCharsToKeep)){
     charCount <- charCount[grep(regexCharsToKeep, names(charCount))]
   }
-  charCount[order(charCount, decreasing=decreasing)]
+  charCount[order(charCount, decreasing = decreasing)]
 })
 
 #' @rdname nchars

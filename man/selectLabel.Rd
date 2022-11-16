@@ -7,9 +7,9 @@
 selectLabel(x, labelCol = "label")
 }
 \arguments{
-\item{categories}{a \code{data.frame} with cols category_no, and, optionally, subcategory_logical, and subcategory_no}
+\item{x}{Story to be told.}
 
-\item{descriptionCol}{character vector}
+\item{labelCol}{Column to use for labelling.}
 }
 \description{
 Select label from data.frame!

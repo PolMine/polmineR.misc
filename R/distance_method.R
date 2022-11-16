@@ -4,11 +4,14 @@
 #' http://stats.stackexchange.com/questions/49453/calculating-jaccard-or-other-association-coefficient-for-binary-data-using-matri
 #' @param x input matrix
 #' @param method defaults to "jaccard", in fact, this is the only method that is implemented
+#' @param ... Further arguments (unused).
+#' @param verbose A `logical` value.
 #' @return object of class \code{dist}
 #' @exportMethod distance
 setGeneric("distance", function(x, ...) standardGeneric("distance"))
 
 #' @rdname distance
+#' @importFrom stats as.dist
 setMethod("distance", "matrix", function(x, method = "jaccard", verbose = TRUE){
   stopifnot(method %in% c("jaccard"))
   if (method == "jaccard"){

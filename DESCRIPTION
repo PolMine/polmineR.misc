@@ -6,7 +6,6 @@ Date: 2022-11-15
 Author: Andreas Blaette
 Maintainer: Andreas Blaette <andreas.blaette@uni-due.de>
 Imports:
-    methods,
     R6,
     polmineR,
     slam,
@@ -14,11 +13,13 @@ Imports:
     bigalgebra,
     data.table,
     proxy,
-    knitr,
     pbapply,
-    rJava
-VignetteBuilder: knitr
-Description: miscellaneaous extensions for the polmineR base package
+    tibble,
+    dplyr,
+    methods,
+    RcppCWB
+Description: Miscellaneaous extensions for the polmineR base package.
+Encoding: UTF-8
 License: GPL-3
 Collate:
     'polmineR.misc_package.R'
@@ -40,9 +41,7 @@ Collate:
     'label_method.R'
     'nchars_method.R'
     'pAttribute_method.R'
-    'papply_function.R'
     'selectLabel_function.R'
-    'store_method.R'
     'validate_method.R'
     'virtualMatrixClass.R'
 RoxygenNote: 7.2.2

@@ -10,7 +10,7 @@ nchars(x, ...)
 
 \S4method{nchars}{partition}(
   x,
-  pAttribute = "word",
+  p_attribute = "word",
   regexCharsToKeep = "[a-zA-Z]",
   toLower = TRUE,
   decreasing = TRUE,
@@ -20,9 +20,11 @@ nchars(x, ...)
 \S4method{nchars}{partition_bundle}(x, decreasing = TRUE, mc = FALSE, progress = TRUE, ...)
 }
 \arguments{
+\item{x}{Object to process.}
+
 \item{...}{parameters that will be passed}
 
-\item{pAttribute}{the p-attribute}
+\item{p_attribute}{the p-attribute}
 
 \item{regexCharsToKeep}{if NULL, counts for all charactrs will be returned, else a regex indicating which characters to include in the counting}
 
@@ -32,7 +34,7 @@ nchars(x, ...)
 
 \item{mc}{logical}
 
-\item{.Object}{object}
+\item{progress}{A \code{logical} value.}
 }
 \description{
 Count the number of characters

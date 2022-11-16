@@ -59,6 +59,7 @@ NULL
 #' @rdname Duplicates
 #' @importFrom parallel mclapply
 #' @importFrom pbapply pblapply
+#' @importFrom stats setNames
 #' @import data.table
 Duplicates <- setRefClass(
   

@@ -12,14 +12,15 @@
 setGeneric("bughunt", function(.Object, ...) standardGeneric("bughunt"))
 
 #' @rdname bughunt-method
-setMethod("bughunt", "character", function(.Object, nested=c("p"=10), ...){
+#' @importFrom RcppCWB cl_struc2cpos cl_cpos2struc cl_struc2str
+setMethod("bughunt", "character", function(.Object, nested = c("p"=10), ...){
   lapply(
     as.character(c(1:nested[1])),
     function(x){
-      a <- cqi_struc2cpos(paste(.Object, ".", names(nested)[1], x, sep=""), 1)
-      b <- cqi_cpos2struc(paste(.Object, ".text_id", sep=""), a[1])
-      beginningNested <- cqi_struc2str(paste(.Object, ".text_id", sep=""), b)
-      previousSiblingNested <- cqi_struc2str(paste(.Object, ".text_id", sep=""), b - 1)
+      a <- cl_struc2cpos(paste(.Object, ".", names(nested)[1], x, sep=""), 1)
+      b <- cl_cpos2struc(paste(.Object, ".text_id", sep=""), a[1])
+      beginningNested <- cl_struc2str(paste(.Object, ".text_id", sep=""), b)
+      previousSiblingNested <- cl_struc2str(paste(.Object, ".text_id", sep=""), b - 1)
       return(c(beginningNested, previousSiblingNested))
     })
 })

@@ -22,9 +22,15 @@ binarize(.Object, ...)
 \arguments{
 \item{.Object}{input object}
 
+\item{...}{Further arguments (unused).}
+
 \item{top}{an integer value, the n values with the highes values that will be TRUE}
 
 \item{reduce}{logical, whether to drop row labels of a simple_triplet_matrix with no TRUE value in the matrix}
+
+\item{mc}{Whether to use multicore, passed into \code{blapply()}.}
+
+\item{progress}{A \code{logical} value.}
 
 \item{verbose}{logical}
 }

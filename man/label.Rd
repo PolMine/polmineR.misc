@@ -19,6 +19,8 @@ label(.Object, ...)
 \arguments{
 \item{.Object}{an object of class \code{partition_bundle}}
 
+\item{...}{Further arguments for generic method definition (unused).}
+
 \item{labels}{labels to assign}
 
 \item{description}{output}

@@ -1,12 +1,16 @@
 #' @rdname as.tibble
 setGeneric("as.tibble", function(.Object, ...) standardGeneric("as.tibble"))
 
+#' @param .Object An object the method is defined for.
+#' @param p_attribute A positional attribute / p-attribute.
+#' @param ... Further arguments.
+#' @param mc Number of cores to use.
 #' @importFrom tibble tibble
 #' @rdname as.tibble
-setMethod("as.tibble", "partition", function(.Object, pAttribute){
-  stopifnot(length(pAttribute) == 1 && pAttribute %in% pAttributes(.Object))
-  T <- tibble(token = getTokenStream(.Object, pAttribute = pAttribute))
-  colnames(T) <- pAttribute
+setMethod("as.tibble", "partition", function(.Object, p_attribute){
+  stopifnot(length(p_attribute) == 1 && p_attribute %in% p_attributes(.Object))
+  T <- tibble(token = getTokenStream(.Object, p_attribute = p_attribute))
+  colnames(T) <- p_attribute
   for (x in names(.Object@sAttributes)) T[[x]] <- .Object@sAttributes[[x]]
   T[["partition_name"]] <- .Object@name
   T
@@ -31,7 +35,7 @@ setMethod("as.tibble", "partition", function(.Object, pAttribute){
 #'   mc = TRUE, progress = TRUE
 #' )
 #' for (i in rev(which(summary(speeches)[["token"]] == 0))) speeches@@objects[[i]] <- NULL
-#' tib <- as.tibble(speeches, pAttribute = "word")
+#' tib <- as.tibble(speeches, p_attribute = "word")
 #' Y <- ddply(
 #'   .data = tib,
 #'   .variable = .(speaker_type, speaker_date, speaker_name, partition_name),
@@ -41,11 +45,11 @@ setMethod("as.tibble", "partition", function(.Object, pAttribute){
 #' colnames(Y)[5] <- "fulltext"
 #' }
 #' @rdname as.tibble
-setMethod("as.tibble", "partition_bundle", function(.Object, pAttribute, mc = getOption("polmineR.mc")){
+setMethod("as.tibble", "partition_bundle", function(.Object, p_attribute, mc = getOption("polmineR.mc")){
   if (mc == FALSE) mc <- 1
   Ts <- pblapply(
     .Object@objects,
-    function(.Object) as.tibble(.Object, pAttribute = pAttribute),
+    function(.Object) as.tibble(.Object, p_attribute = p_attribute),
     cl = mc
     )
   T <- dplyr::bind_rows(Ts)

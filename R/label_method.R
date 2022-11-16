@@ -1,3 +1,8 @@
+#' @rdname label
+#' @param ... Further arguments for generic method definition (unused).
+#' @exportMethod label 
+setGeneric("label", function(.Object, ...) standardGeneric("label"))
+
 #' assign labels
 #' 
 #' @param .Object an object of class `partition_bundle`
@@ -15,14 +20,11 @@
 #' df <- label(speechesSample, logfile="/Users/blaette/Lab/tmp/foo.csv")
 #' } 
 #' @exportMethod label
-#' @rdname label-method
-setGeneric("label", function(.Object, ...) standardGeneric("label"))
-
-#' @rdname label-method
+#' @rdname label
 setMethod("label", "partition_bundle", function(.Object, labels=c(true=1, false=0), description="Make your choice", logfile=NULL, resume=FALSE, ...){
   retval <- list()
   labels <- c(setNames(as.character(labels), names(labels)), quit="quit")
-  for (i in c(1:length(.Object@objects))){
+  for (i in 1:length(.Object@objects)){
     read(.Object@objects[[i]], ...)
     msg <- paste(
       description, " (",

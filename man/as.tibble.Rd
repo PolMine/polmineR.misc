@@ -8,9 +8,18 @@
 \usage{
 as.tibble(.Object, ...)
 
-\S4method{as.tibble}{partition}(.Object, pAttribute)
+\S4method{as.tibble}{partition}(.Object, p_attribute)
 
-\S4method{as.tibble}{partition_bundle}(.Object, pAttribute, mc = getOption("polmineR.mc"))
+\S4method{as.tibble}{partition_bundle}(.Object, p_attribute, mc = getOption("polmineR.mc"))
+}
+\arguments{
+\item{.Object}{An object the method is defined for.}
+
+\item{...}{Further arguments.}
+
+\item{p_attribute}{A positional attribute / p-attribute.}
+
+\item{mc}{Number of cores to use.}
 }
 \description{
 Turn partition into tibble.
@@ -30,7 +39,7 @@ speeches <- as.speeches(
   mc = TRUE, progress = TRUE
 )
 for (i in rev(which(summary(speeches)[["token"]] == 0))) speeches@objects[[i]] <- NULL
-tib <- as.tibble(speeches, pAttribute = "word")
+tib <- as.tibble(speeches, p_attribute = "word")
 Y <- ddply(
   .data = tib,
   .variable = .(speaker_type, speaker_date, speaker_name, partition_name),

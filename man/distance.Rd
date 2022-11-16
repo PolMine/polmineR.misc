@@ -15,7 +15,11 @@ distance(x, ...)
 \arguments{
 \item{x}{input matrix}
 
+\item{...}{Further arguments (unused).}
+
 \item{method}{defaults to "jaccard", in fact, this is the only method that is implemented}
+
+\item{verbose}{A \code{logical} value.}
 }
 \value{
 object of class \code{dist}

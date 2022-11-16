@@ -28,9 +28,9 @@ speed up character count}
 passed as argument \code{n} into \code{polmineR::ngrams()}. Defaults to 5, in
 line with Kliche et al. 2014: 695.}
 
-\item{Numeric/integer}{vector used for indexing \verb{$charCount} to select
-the characters to keep. Defaults to 1:12, in line with Kliche et al.
-2014: 695.}
+\item{character_selection}{Numeric/integer vector used for indexing
+\verb{$charCount} to select the characters to keep. Defaults to 1:12, in
+line with Kliche et al. 2014: 695.}
 }
 \description{
 Class for duplicate detection.

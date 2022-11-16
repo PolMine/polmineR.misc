@@ -60,6 +60,7 @@ NULL
 #' @importFrom parallel mclapply
 #' @importFrom pbapply pblapply
 #' @importFrom stats setNames
+#' @importFrom RcppCWB get_region_matrix
 #' @import data.table
 Duplicates <- setRefClass(
   
@@ -291,12 +292,14 @@ Duplicates <- setRefClass(
       generate cwb-s-encode command and execute it, if wanted."
       
       sAttr <- sAttributes(.self$corpus, sAttributeID, unique = FALSE)
-      cposList <- lapply(
-        c(0:(length(sAttr) - 1)),
-        function(i) CQI$struc2cpos(.self$corpus, sAttributeID, i)
-        )
-      cposMatrix <- do.call(rbind, cposList)
+      
+      cposMatrix <- RcppCWB::get_region_matrix(
+        corpus = .self$corpus,
+        s_attribute = sAttributeID,
+        struc = 0L:(length(sAttr) - 1L)
+      )
       colnames(cposMatrix) <- c("cpos_left", "cpos_right")
+      
       cposDT <- data.table(cposMatrix)
       cposDT[, sAttributeID := sAttr]
       setnames(cposDT, old = "sAttributeID", new = sAttributeID)

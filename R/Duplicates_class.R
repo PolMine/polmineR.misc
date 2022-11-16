@@ -54,35 +54,53 @@ NULL
 #' @importFrom cli cli_progress_step
 #' @import data.table
 #' @examples
-#' \dontrun{
-#' library(polmineR.misc)
 #' library(polmineR)
-#' library(pbapply)
-#' library(slam)
 #' 
-#' coi <- "NADIRASZ"
-#' s_attr_date <- "article_date"
+#' if ("NADIRASZ" %in% corpus()$corpus){
+#'   coi <- "NADIRASZ"
+#'   s_attr_date <- "article_date"
 #' 
-#' D <- Duplicates$new(
-#'   charRegex = "[a-zA-ZäöüÄÖÜ]",
-#'   pAttribute = "word",
-#'   sAttribute = s_attr_date,
-#'   datePrep = NULL,
-#'   sample = 100L,
-#'   n = 1L,
-#'   threshold = 0.6 # default is 0.9
-#' )
+#'   D <- Duplicates$new(
+#'     charRegex = "[a-zA-ZäöüÄÖÜ]",
+#'     pAttribute = "word",
+#'     sAttribute = s_attr_date,
+#'     datePrep = NULL,
+#'     sample = 50L,
+#'     n = 1L,
+#'     threshold = 0.6 # default is 0.9
+#'   )
 #' 
-#' set.seed(132)
-#' sample_days <- s_attributes(coi, s_attr_date)[1:5]
+#'   sample_days <- s_attributes(coi, s_attr_date)[1:2]
 #' 
-#' article_bundle <- corpus(coi) |>
-#' subset(article_date %in% sample_days) |> 
-#'   split(s_attribute = "article_id")
+#'   article_bundle <- corpus(coi) |>
+#'     subset(article_date %in% sample_days) |> 
+#'     split(s_attribute = "article_id")
 #' 
-#' # results in 3500 elements
-#' 
-#' D$detectDuplicates(x = article_bundle, mc = 3L)
+#'   D$detectDuplicates(x = article_bundle, mc = 3L)
+#'   
+#'   # To inspect result
+#'   D$duplicates
+#'   
+#'   if (interactive()){
+#'     for (i in 1L:nrow(D$duplicates)){
+#'     
+#'       print(i)
+#'       
+#'       corpus("NADIRASZ") %>%
+#'         subset(article_id == !!D$duplicates[i][["name"]]) %>%
+#'         read() %>%
+#'         show()
+#'         
+#'       readline()
+#'   
+#'       corpus("NADIRASZ") %>%
+#'         subset(article_id == !!D$duplicates[i][["duplicate_name"]]) %>%
+#'         read() %>%
+#'         show()
+#'         
+#'       readline()
+#'     }
+#'   }
 #' }
 Duplicates <- setRefClass(
   
@@ -180,48 +198,90 @@ Duplicates <- setRefClass(
       "Turn similarities of documents into a data.table that identifies original document and duplicate."
       
       if (verbose) message("... applying threshold")
-      if (mc == FALSE) mc <- 1
+      if (mc == FALSE) mc <- 1L
       dates <- unlist(lapply(
         setNames(x@objects, names(x)),
         function(y) sAttributes(y, .self$sAttribute))
       )
       dates <- sapply(dates, .self$datePrep)
       indexDuplicates <- which(.self$similarityMatrix$v >= .self$threshold)
-      if (length(indexDuplicates) > 0L){
-        # keep only those values in similarity matrix that are above the threshold
-        for (what in c("i", "j", "v")) .self$similarityMatrix[[what]] <- .self$similarityMatrix[[what]][indexDuplicates]  
-        duplicateList <- lapply(
-          1L:length(.self$similarityMatrix$i),
-          function(i){
-            iName <- .self$similarityMatrix$dimnames[[1]][.self$similarityMatrix$i[i]]
-            jName <- .self$similarityMatrix$dimnames[[1]] [.self$similarityMatrix$j[i]]
-            iDate <- as.POSIXct(dates[[iName]])
-            iSize <- x@objects[iName][[1]]@size
-            jDate <- as.POSIXct(dates[[jName]])
-            jSize <- x@objects[jName][[1]]@size
-            value <- .self$similarityMatrix$v[i]
-            if(iDate == jDate){
-              if (iSize >= jSize){
-                return(c(name=iName, date=as.character(iDate), size=iSize, duplicate_name=jName, duplicate_date=as.character(jDate), duplicate_size=jSize, similarity=value))
-              } else {
-                return(c(name=jName, date=as.character(jDate), size=jSize, duplicate_name=iName, duplicate_date=as.character(iDate), duplicate_size=iSize, similarity=value))
-              }
-            } else if (iDate < jDate){
-              return(c(name=iName, date=as.character(iDate), size=iSize, duplicate_name=jName, duplicate_date=as.character(jDate), duplicate_size=jSize, similarity=value))
-            } else if (iDate > jDate){
-              return(c(name=jName, date=as.character(jDate), size=jSize, duplicate_name=iName, duplicate_date=as.character(iDate), duplicate_size=iSize, similarity=value))
-            }
-          })
-        duplicateDT <- data.table(do.call(rbind, duplicateList))
-        count <- function(y) return(y)
-        DT <- duplicateDT[, count(.N), by=.(name, date, size, duplicate_name, duplicate_date, duplicate_size, similarity)]
-        DT[, V1 := NULL]
-        DT[, size := as.numeric(size)][, duplicate_size := as.numeric(duplicate_size)][, similarity := as.numeric(similarity)]
-        return(DT)
-      } else {
+      
+      if (length(indexDuplicates) == 0L){
         message("... no duplicates found")
         return(NULL)
       }
+      
+      # keep only those values in similarity matrix that are above the threshold
+      for (what in c("i", "j", "v")) .self$similarityMatrix[[what]] <- .self$similarityMatrix[[what]][indexDuplicates]  
+      duplicateList <- lapply(
+        1L:length(.self$similarityMatrix$i),
+        function(i){
+          iName <- .self$similarityMatrix$dimnames[[1]][.self$similarityMatrix$i[i]]
+          jName <- .self$similarityMatrix$dimnames[[1]] [.self$similarityMatrix$j[i]]
+          iDate <- as.POSIXct(dates[[iName]])
+          iSize <- x@objects[iName][[1]]@size
+          jDate <- as.POSIXct(dates[[jName]])
+          jSize <- x@objects[jName][[1]]@size
+          value <- .self$similarityMatrix$v[i]
+          if (iDate == jDate){
+            if (iSize >= jSize){
+              return(
+                c(
+                  name = iName,
+                  date = as.character(iDate),
+                  size = iSize,
+                  duplicate_name = jName,
+                  duplicate_date = as.character(jDate),
+                  duplicate_size = jSize,
+                  similarity=value
+                )
+              )
+            } else {
+              return(
+                c(
+                  name = jName,
+                  date = as.character(jDate),
+                  size = jSize,
+                  duplicate_name = iName,
+                  duplicate_date = as.character(iDate),
+                  duplicate_size = iSize,
+                  similarity = value
+                )
+              )
+            }
+          } else if (iDate < jDate){
+            return(
+              c(
+                name = iName,
+                date = as.character(iDate),
+                size = iSize,
+                duplicate_name = jName,
+                duplicate_date = as.character(jDate),
+                duplicate_size = jSize,
+                similarity = value
+              )
+            )
+          } else if (iDate > jDate){
+            return(
+              c(
+                name = jName,
+                date = as.character(jDate),
+                size = jSize,
+                duplicate_name = iName,
+                duplicate_date = as.character(iDate),
+                duplicate_size = iSize,
+                similarity = value
+              )
+            )
+          }
+        })
+      
+      duplicateDT <- data.table(do.call(rbind, duplicateList))
+      count <- function(y) return(y)
+      DT <- duplicateDT[, count(.N), by = .(name, date, size, duplicate_name, duplicate_date, duplicate_size, similarity)]
+      DT[, V1 := NULL]
+      DT[, size := as.numeric(size)][, duplicate_size := as.numeric(duplicate_size)][, similarity := as.numeric(similarity)]
+      DT
     },
     
     #' @param x A `partition_bundle` or `subcorpus_bundle` object.

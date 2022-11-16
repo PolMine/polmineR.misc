@@ -19,6 +19,8 @@ Imports:
     methods,
     RcppCWB,
     cli
+Suggests:
+    testthat
 Description: Miscellaneaous extensions for the polmineR base package.
 Encoding: UTF-8
 License: GPL-3

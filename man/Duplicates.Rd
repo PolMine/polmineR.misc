@@ -121,43 +121,52 @@ generate cwb-s-encode command and execute it, if wanted.}
 }}
 
 \examples{
-\dontrun{
-foo <- partition_bundle(
-  "KEYWORDS",
-  def = list(text_newspaper="guardian"),
-  var=list(text_id=sAttributes("KEYWORDS", "text_id")[1:500]),
-  pAttribute=NULL
- )
-doubled <- duplicates(foo)
-}
-\dontrun{
-library(polmineR.misc)
 library(polmineR)
-library(pbapply)
-library(slam)
 
-coi <- "NADIRAFAZ"
-s_attr_date <- "article_date"
+if ("NADIRASZ" \%in\% corpus()$corpus){
+  coi <- "NADIRASZ"
+  s_attr_date <- "article_date"
 
-D <- Duplicates$new(
-  charRegex = "[a-zA-ZäöüÄÖÜ]",
-  pAttribute = "word",
-  sAttribute = s_attr_date,
-  datePrep = NULL,
-  sample = 1000L,
-  n = 1L,
-  threshold = 0.6 # default is 0.9
-)
+  D <- Duplicates$new(
+    charRegex = "[a-zA-ZäöüÄÖÜ]",
+    pAttribute = "word",
+    sAttribute = s_attr_date,
+    datePrep = NULL,
+    sample = 50L,
+    n = 1L,
+    threshold = 0.6 # default is 0.9
+  )
 
-set.seed(132)
-sample_days <- sample(s_attributes(coi, s_attr_date), 10) # only use a small part of the corpus 
+  sample_days <- s_attributes(coi, s_attr_date)[1:2]
 
-article_bundle <- corpus(coi) |>
-subset(article_date \%in\% sample_days) |> 
-  split(s_attribute = "article_id")
+  article_bundle <- corpus(coi) |>
+    subset(article_date \%in\% sample_days) |> 
+    split(s_attribute = "article_id")
 
-# results in 3500 elements
-
-D$detectDuplicates(x = article_bundle, mc = 3L)
+  D$detectDuplicates(x = article_bundle, mc = 3L)
+  
+  # To inspect result
+  D$duplicates
+  
+  if (interactive()){
+    for (i in 1L:nrow(D$duplicates)){
+    
+      print(i)
+      
+      corpus("NADIRASZ") \%>\%
+        subset(article_id == !!D$duplicates[i][["name"]]) \%>\%
+        read() \%>\%
+        show()
+        
+      readline()
+  
+      corpus("NADIRASZ") \%>\%
+        subset(article_id == !!D$duplicates[i][["duplicate_name"]]) \%>\%
+        read() \%>\%
+        show()
+        
+      readline()
+    }
+  }
 }
 }

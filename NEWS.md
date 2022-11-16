@@ -5,6 +5,8 @@ polmineR::ngrams) and `character_selection`. Values were hard-coded previously.
 Default values are aligned with Kliche et al. 2014.
 * Remaining use of `CQI$struc2cpos()` has been replaced by RcppCWB functionality
 (`get_region_matrix()`) #5.
+* Method `nchars()` is implemented for `subcorpus` and `subcorpus_bundle` objects 
+now and will be available for `plpr_subcorpus` by inheritance #3.
 
 ## v0.1.9
 

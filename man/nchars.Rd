@@ -3,7 +3,9 @@
 \name{nchars}
 \alias{nchars}
 \alias{nchars,partition-method}
+\alias{nchars,subcorpus-method}
 \alias{nchars,partition_bundle-method}
+\alias{nchars,subcorpus_bundle-method}
 \title{Count the number of characters}
 \usage{
 nchars(x, ...)
@@ -13,16 +15,25 @@ nchars(x, ...)
   p_attribute = "word",
   regexCharsToKeep = "[a-zA-Z]",
   toLower = TRUE,
-  decreasing = TRUE,
-  ...
+  decreasing = TRUE
 )
 
-\S4method{nchars}{partition_bundle}(x, decreasing = TRUE, mc = FALSE, progress = TRUE, ...)
+\S4method{nchars}{subcorpus}(
+  x,
+  p_attribute = "word",
+  regexCharsToKeep = "[a-zA-Z]",
+  toLower = TRUE,
+  decreasing = TRUE
+)
+
+\S4method{nchars}{partition_bundle}(x, mc = FALSE, progress = TRUE, decreasing = TRUE, ...)
+
+\S4method{nchars}{subcorpus_bundle}(x, decreasing = TRUE, mc = FALSE, progress = TRUE, ...)
 }
 \arguments{
 \item{x}{Object to process.}
 
-\item{...}{parameters that will be passed}
+\item{...}{Argument passed into \code{blapply()}.}
 
 \item{p_attribute}{the p-attribute}
 
@@ -38,6 +49,23 @@ nchars(x, ...)
 }
 \description{
 Count the number of characters
+}
+\examples{
+library(polmineR)
+use("RcppCWB")
 
-count characters
+partition("REUTERS", id = "127") \%>\%
+  nchars()
+  
+corpus("REUTERS") \%>\%
+  subset(id == "127") \%>\%
+  nchars()
+  
+corpus("REUTERS") \%>\%
+  partition_bundle(s_attribute = "id") \%>\%
+  nchars()
+  
+corpus("REUTERS") \%>\%
+  split(s_attribute = "id") \%>\%
+  nchars()
 }

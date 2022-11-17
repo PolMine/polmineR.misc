@@ -99,8 +99,6 @@ if ("NADIRASZ" \%in\% corpus()$corpus){
 
 \item{\code{similarities}}{a \code{simple_triplet_matrix} with similarities of texts}
 
-\item{\code{ngramDocumentMatrix}}{a matrix (inheriting from \code{TermDocumentMatrix}) with ngram counts in the documents of the \code{partition_bundle}}
-
 \item{\code{datePrep}}{function to rework dates if not in the DD-MM-YYYY standard format}
 
 \item{\code{annotation}}{a \code{data.table} with corpus positions.}

@@ -126,9 +126,6 @@ Duplicates <- R6::R6Class(
     #' @field similarities a \code{simple_triplet_matrix} with similarities of texts
     similarities = "simple_triplet_matrix",
     
-    #' @field ngrams a matrix (inheriting from \code{TermDocumentMatrix}) with ngram counts in the documents of the `partition_bundle`
-    ngrams = "TermDocumentMatrix",
-    
     #' @field datePrep function to rework dates if not in the DD-MM-YYYY standard format
     datePrep = "function",
     
@@ -335,7 +332,7 @@ Duplicates <- R6::R6Class(
       ngram_bundle <- ngrams(x, n = n, char = names(self$char_count[character_selection]), mc = mc, progress = progress)
       
       if (verbose) cli_progress_step("assemble ngram matrix")
-      self$ngrams <- as.TermDocumentMatrix(ngram_bundle, col = "count") |>
+      ngram_matrix <- as.TermDocumentMatrix(ngram_bundle, col = "count") |>
         weigh(method = "tfidf")
       
       if (self$n == 0){
@@ -352,7 +349,7 @@ Duplicates <- R6::R6Class(
         .get_similarities <- function(groupname){
           if (verbose) message("... compute similarities for: ", groupname)
           ids <- groups[[groupname]]
-          m <- as.matrix(self$ngrams[,ids])
+          m <- as.matrix(ngram_matrix[,ids])
           empty_rows <- unname(which(rowSums(m) == 0L))
           if (length(empty_rows) > 0L) m <- m[-empty_rows,]
           sim <- cosine_similarity(x = t(m), how = how)
@@ -393,7 +390,7 @@ Duplicates <- R6::R6Class(
         
         if (verbose) cli_progress_step("calculating cosine similarity")
         self$similarities <- cosine_similarity(
-          x = self$ngrams, y = self$comparisons,
+          x = ngram_matrix, y = self$comparisons,
           mc = mc, progress = progress
         )
         # here: If duplicates slot not empty, add rows

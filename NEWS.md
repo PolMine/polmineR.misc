@@ -3,6 +3,9 @@
 * Class `Duplicates` used to be a base R reference class (defined by
 `setRefClass()`), it is now an R6 class (defined by `R6::R6Class()`).
 Precondition to use the functionality of roxygen2 for documenting R6 classes.
+* Field with ngrams matrix of the `Duplicates` class has been dropped: The
+matrix may be bulky and is used only temporarily. No need to store it beyond
+duplicate detection workflow to save memory space.
 
 
 ## v0.2.0

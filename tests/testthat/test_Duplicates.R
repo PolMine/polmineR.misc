@@ -10,7 +10,6 @@ test_that(
         char_regex = "[a-zA-ZäöüÄÖÜ]",
         p_attribute = "word",
         s_attribute = "article_date",
-        datePrep = NULL,
         sample = 50L,
         n = 1L,
         threshold = 0.9
@@ -20,7 +19,7 @@ test_that(
         subset(article_date == "2000-01-01") |>
         split(s_attribute = "article_id")
 
-      D$detectDuplicates(x = article_bundle, mc = 3L, progress = FALSE)
+      D$detect(x = article_bundle, mc = 3L, progress = FALSE)
       
       testthat::expect_equal(
         D$duplicates[["name"]], c("A9743732", "A9743756"),
@@ -40,7 +39,6 @@ test_that(
         char_regex = "[a-zA-ZäöüÄÖÜ]",
         p_attribute = "word",
         s_attribute = "article_date",
-        datePrep = NULL,
         sample = 50L,
         n = 0L,
         threshold = 0.9
@@ -59,7 +57,7 @@ test_that(
         subset(article_date %in% dates) |>
         split(s_attribute = "article_id")
 
-      D$detectDuplicates(x = article_bundle, mc = 3L, progress = FALSE, how = "algebra")
+      D$detect(x = article_bundle, mc = 3L, progress = FALSE, how = "algebra")
     }
   }
 )

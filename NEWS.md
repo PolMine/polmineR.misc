@@ -6,7 +6,10 @@ Precondition to use the functionality of roxygen2 for documenting R6 classes.
 * Field with ngrams matrix of the `Duplicates` class has been dropped: The
 matrix may be bulky and is used only temporarily. No need to store it beyond
 duplicate detection workflow to save memory space.
-
+* Fields `whatToCompare` and `similarityMatrix` dropped from Duplicates class to
+improve memory efficiency.
+* Method `Duplicates$detectDuplicates()` is `Duplicates$detect()` now.
+* Method `Duplicates$makeAnnotation()` renamed as `Duplicates$annotate()`.
 
 ## v0.2.0
 

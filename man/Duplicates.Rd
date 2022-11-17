@@ -25,7 +25,7 @@ the article that appeared later will be considered the duplicate.
 }
 
 Different \code{partition_bundle}-objects can be passed into the
-\code{detectDuplicates}-method successively. The field \code{duplicates} will be
+\code{detect}-method successively. The field \code{duplicates} will be
 appended by the duplicates that are newly detected.
 }
 \examples{
@@ -39,7 +39,7 @@ if ("NADIRASZ" \%in\% corpus()$corpus){
     char_regex = "[a-zA-ZäöüÄÖÜ]",
     p_attribute = "word",
     s_attribute = s_attr_date,
-    datePrep = NULL,
+    date_preprocessor = NULL,
     sample = 50L,
     n = 1L,
     threshold = 0.6 # default is 0.9
@@ -49,7 +49,7 @@ if ("NADIRASZ" \%in\% corpus()$corpus){
     subset(article_date == "2000-01-01") |> 
     split(s_attribute = "article_id")
 
-  D$detectDuplicates(x = article_bundle, mc = 3L)
+  D$detect(x = article_bundle, mc = 3L)
   
   # To inspect result
   D$duplicates
@@ -93,11 +93,14 @@ if ("NADIRASZ" \%in\% corpus()$corpus){
 
 \item{\code{sample}}{size of the sample of the \code{partition_bundle} that the character count is based on}
 
-\item{\code{threshold}}{minimum similarity value to identify two texts as duplicates}
+\item{\code{threshold}}{Minimum similarity value to consider two texts as
+duplicates.}
+
+\item{\code{duplicates}}{A \code{data.table} with documents considered as duplicates.}
 
 \item{\code{similarities}}{a \code{simple_triplet_matrix} with similarities of texts}
 
-\item{\code{datePrep}}{function to rework dates if not in the DD-MM-YYYY standard format}
+\item{\code{date_preprocessor}}{function to rework dates if not in the DD-MM-YYYY standard format}
 
 \item{\code{annotation}}{a \code{data.table} with corpus positions.}
 }
@@ -108,8 +111,8 @@ if ("NADIRASZ" \%in\% corpus()$corpus){
 \itemize{
 \item \href{#method-Duplicates-new}{\code{Duplicates$new()}}
 \item \href{#method-Duplicates-get_comparisons}{\code{Duplicates$get_comparisons()}}
-\item \href{#method-Duplicates-makeDuplicateDataTable}{\code{Duplicates$makeDuplicateDataTable()}}
-\item \href{#method-Duplicates-detectDuplicates}{\code{Duplicates$detectDuplicates()}}
+\item \href{#method-Duplicates-similarities_matrix_to_dt}{\code{Duplicates$similarities_matrix_to_dt()}}
+\item \href{#method-Duplicates-detect}{\code{Duplicates$detect()}}
 \item \href{#method-Duplicates-makeAnnotation}{\code{Duplicates$makeAnnotation()}}
 \item \href{#method-Duplicates-encode}{\code{Duplicates$encode()}}
 \item \href{#method-Duplicates-clone}{\code{Duplicates$clone()}}
@@ -125,7 +128,7 @@ Initialize object of class \code{Duplicates}.
   char_regex = "[a-zA-Z]",
   p_attribute = "word",
   s_attribute = "text_date",
-  datePrep = NULL,
+  date_preprocessor = NULL,
   sample = 1000L,
   n = 1L,
   threshold = 0.9
@@ -180,14 +183,15 @@ compared to detect duplicates}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Duplicates-makeDuplicateDataTable"></a>}}
-\if{latex}{\out{\hypertarget{method-Duplicates-makeDuplicateDataTable}{}}}
-\subsection{Method \code{makeDuplicateDataTable()}}{
+\if{html}{\out{<a id="method-Duplicates-similarities_matrix_to_dt"></a>}}
+\if{latex}{\out{\hypertarget{method-Duplicates-similarities_matrix_to_dt}{}}}
+\subsection{Method \code{similarities_matrix_to_dt()}}{
 Turn similarities of documents into a data.table that identifies original
 document and duplicate.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Duplicates$makeDuplicateDataTable(
+\if{html}{\out{<div class="r">}}\preformatted{Duplicates$similarities_matrix_to_dt(
   x,
+  similarities,
   mc = FALSE,
   progress = TRUE,
   verbose = TRUE
@@ -200,6 +204,8 @@ document and duplicate.
 \item{\code{x}}{a \code{partition_bundle} object defining the documents that will be
 compared to detect duplicates}
 
+\item{\code{similarities}}{A \code{TermDocumentMatrix} with cosine similarities.}
+
 \item{\code{mc}}{logical, whether to use multicore}
 
 \item{\code{progress}}{logical, whether to show progress bar}
@@ -210,12 +216,12 @@ compared to detect duplicates}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Duplicates-detectDuplicates"></a>}}
-\if{latex}{\out{\hypertarget{method-Duplicates-detectDuplicates}{}}}
-\subsection{Method \code{detectDuplicates()}}{
+\if{html}{\out{<a id="method-Duplicates-detect"></a>}}
+\if{latex}{\out{\hypertarget{method-Duplicates-detect}{}}}
+\subsection{Method \code{detect()}}{
 Wrapper that implements the entire workflow for duplicate detection.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Duplicates$detectDuplicates(
+\if{html}{\out{<div class="r">}}\preformatted{Duplicates$detect(
   x,
   n = 5L,
   character_selection = 1:12,
@@ -249,6 +255,9 @@ line with Kliche et al. 2014: 695.}
 \item{\code{progress}}{logical, whether to show progress bar}
 }
 \if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The updated content of slot \verb{$duplicates} is returned invisibly.
 }
 }
 \if{html}{\out{<hr>}}

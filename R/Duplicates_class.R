@@ -18,7 +18,7 @@ NULL
 #' the article that appeared later will be considered the duplicate.
 #' 
 #' Different `partition_bundle`-objects can be passed into the
-#' \code{detectDuplicates}-method successively. The field `duplicates` will be
+#' \code{detect}-method successively. The field `duplicates` will be
 #' appended by the duplicates that are newly detected.
 #' 
 #' @param x a `partition_bundle` object defining the documents that will be
@@ -52,7 +52,7 @@ NULL
 #'     char_regex = "[a-zA-ZäöüÄÖÜ]",
 #'     p_attribute = "word",
 #'     s_attribute = s_attr_date,
-#'     datePrep = NULL,
+#'     date_preprocessor = NULL,
 #'     sample = 50L,
 #'     n = 1L,
 #'     threshold = 0.6 # default is 0.9
@@ -62,7 +62,7 @@ NULL
 #'     subset(article_date == "2000-01-01") |> 
 #'     split(s_attribute = "article_id")
 #' 
-#'   D$detectDuplicates(x = article_bundle, mc = 3L)
+#'   D$detect(x = article_bundle, mc = 3L)
 #'   
 #'   # To inspect result
 #'   D$duplicates
@@ -115,23 +115,25 @@ Duplicates <- R6::R6Class(
     #' @field sample size of the sample of the `partition_bundle` that the character count is based on
     sample = NULL,
     
-    #' @field threshold minimum similarity value to identify two texts as duplicates
+    #' @field threshold Minimum similarity value to consider two texts as
+    #'   duplicates.
     threshold = NULL,
     
+    #' @field duplicates A `data.table` with documents considered as duplicates.
     duplicates = NULL,
     
     #' @field similarities a \code{simple_triplet_matrix} with similarities of texts
     similarities = "simple_triplet_matrix",
     
-    #' @field datePrep function to rework dates if not in the DD-MM-YYYY standard format
-    datePrep = "function",
+    #' @field date_preprocessor function to rework dates if not in the DD-MM-YYYY standard format
+    date_preprocessor = "function",
     
     #' @field annotation a \code{data.table} with corpus positions.
     annotation = "data.table",
     
     #' @description 
     #' Initialize object of class `Duplicates`.
-    initialize = function(char_regex = "[a-zA-Z]", p_attribute = "word", s_attribute = "text_date", datePrep = NULL, sample = 1000L, n = 1L, threshold = 0.9){
+    initialize = function(char_regex = "[a-zA-Z]", p_attribute = "word", s_attribute = "text_date", date_preprocessor = NULL, sample = 1000L, n = 1L, threshold = 0.9){
       
       self$char_regex <- char_regex
       self$s_attribute <- s_attribute
@@ -139,7 +141,7 @@ Duplicates <- R6::R6Class(
       self$sample <- as.integer(sample)
       self$n <- as.integer(n)
       self$threshold <- threshold
-      if (is.null(datePrep)) self$datePrep <- function(x) x
+      if (is.null(date_preprocessor)) self$date_preprocessor <- function(x) x
       
     },
     
@@ -158,7 +160,7 @@ Duplicates <- R6::R6Class(
       
       if (verbose) message("... getting docs to be compared")
       dates <- unlist(lapply(setNames(x@objects, names(x)), function(y) s_attributes(y, self$s_attribute)))
-      if (!is.null(self$datePrep)) dates <- sapply(dates, self$datePrep)
+      if (!is.null(self$date_preprocessor)) dates <- sapply(dates, self$date_preprocessor)
       objectSplittedByDate <- split(1:length(x), f = dates)
       .get_comparisons <- function(i){
         dateOfDoc <- try(as.POSIXct(unname(dates[i])))
@@ -200,7 +202,8 @@ Duplicates <- R6::R6Class(
     #' @description
     #' Turn similarities of documents into a data.table that identifies original
     #' document and duplicate.
-    makeDuplicateDataTable = function(x, mc = FALSE, progress = TRUE, verbose = TRUE){
+    #' @param similarities A `TermDocumentMatrix` with cosine similarities.
+    similarities_matrix_to_dt = function(x, similarities, mc = FALSE, progress = TRUE, verbose = TRUE){
       
       if (mc == FALSE) mc <- 1L
       
@@ -209,8 +212,8 @@ Duplicates <- R6::R6Class(
         s_attributes,
         s_attribute = self$s_attribute
       ))
-      dates <- sapply(dates, self$datePrep)
-      indexDuplicates <- which(self$similarities$v >= self$threshold)
+      dates <- sapply(dates, self$date_preprocessor)
+      indexDuplicates <- which(similarities$v >= self$threshold)
       
       if (length(indexDuplicates) == 0L){
         message("... no duplicates found")
@@ -219,18 +222,18 @@ Duplicates <- R6::R6Class(
       
       # keep only those values in similarity matrix that are above the threshold
       for (what in c("i", "j", "v"))
-        self$similarities[[what]] <- self$similarities[[what]][indexDuplicates]  
+        similarities[[what]] <- similarities[[what]][indexDuplicates]  
       
       duplicateList <- lapply(
-        1L:length(self$similarities$i),
+        1L:length(similarities$i),
         function(i){
-          iName <- self$similarities$dimnames[[1]][self$similarities$i[i]]
-          jName <- self$similarities$dimnames[[1]] [self$similarities$j[i]]
+          iName <- similarities$dimnames[[1]][similarities$i[i]]
+          jName <- similarities$dimnames[[1]] [similarities$j[i]]
           iDate <- as.POSIXct(dates[[iName]])
           iSize <- x@objects[iName][[1]]@size
           jDate <- as.POSIXct(dates[[jName]])
           jSize <- x@objects[jName][[1]]@size
-          value <- self$similarities$v[i]
+          value <- similarities$v[i]
           if (iDate == jDate){
             if (iSize >= jSize){
               return(
@@ -303,7 +306,8 @@ Duplicates <- R6::R6Class(
     #'   line with Kliche et al. 2014: 695.
     #' @param how Implementation used to compute similarities - passed into 
     #'   `cosine_similarity()`.
-    detectDuplicates = function(x, n = 5L, character_selection = 1:12, how = "coop", verbose = TRUE, mc = FALSE, progress = TRUE){
+    #' @return The updated content of slot `$duplicates` is returned invisibly.
+    detect = function(x, n = 5L, character_selection = 1:12, how = "coop", verbose = TRUE, mc = FALSE, progress = TRUE){
       
       self$corpus <- unique(sapply(x@objects, function(x) x@corpus))
       stopifnot(length(self$corpus) == 1L)
@@ -375,7 +379,7 @@ Duplicates <- R6::R6Class(
         dt[, "j" := unname( index_new[dt[["Var2"]]] )]
         # keep only one similarity score per pair
         dt <- dt[which(ifelse(dt[["i"]] < dt[["j"]], TRUE, FALSE))]
-        self$similarities <- simple_triplet_matrix(
+        similarities <- simple_triplet_matrix(
           i = dt[["i"]], j = dt[["j"]], v = dt[["value"]],
           nrow = length(index_new),
           ncol = length(index_new),
@@ -386,7 +390,7 @@ Duplicates <- R6::R6Class(
         comparisons <- self$get_comparisons(x = x, verbose = verbose, mc = mc, progress = progress)
         
         if (verbose) cli_progress_step("calculating cosine similarity")
-        self$similarities <- cosine_similarity(
+        similarities <- cosine_similarity(
           x = ngram_matrix, y = comparisons,
           mc = mc, progress = progress
         )
@@ -394,20 +398,27 @@ Duplicates <- R6::R6Class(
       }
       
       if (verbose) cli_progress_step("preparing data.table")
-      newDuplicateDT <- self$makeDuplicateDataTable(x = x, mc = mc, verbose = verbose, progress = TRUE)
+      newDuplicateDT <- self$similarities_matrix_to_dt(
+        x = x,
+        similarities = similarities,
+        mc = mc,
+        verbose = verbose,
+        progress = TRUE
+      )
       if (is.null(self$duplicates)){
         self$duplicates <- newDuplicateDT
       } else {
         if (verbose) message("... data.table with duplicates alread present, appending new results")
         self$duplicates <- rbind(self$duplicates, newDuplicateDT)
       }
+      invisible(self$duplicates)
     },
     
     #' @description
     #' Turn data.table with duplicates into file with corpus positions and
     #' annotation of duplicates, generate cwb-s-encode command and execute it,
     #' if wanted.
-    makeAnnotation = function(sAttributeID){
+    annotate = function(sAttributeID){
       
       sAttr <- s_attributes(self$corpus, sAttributeID, unique = FALSE)
       

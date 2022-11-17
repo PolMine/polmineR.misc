@@ -7,6 +7,7 @@ test_that(
     if ("NADIRASZ" %in% corpus()$corpus){
       
       D <- Duplicates$new(
+        corpus = "NADIRASZ",
         char_regex = "[a-zA-ZäöüÄÖÜ]",
         p_attribute = "word",
         s_attribute = "article_date",
@@ -36,6 +37,7 @@ test_that(
     if ("NADIRASZ" %in% corpus()$corpus){
 
       D <- Duplicates$new(
+        corpus = "NADIRASZ",
         char_regex = "[a-zA-ZäöüÄÖÜ]",
         p_attribute = "word",
         s_attribute = "article_date",

@@ -45,20 +45,18 @@ NULL
 #' library(polmineR)
 #' 
 #' if ("NADIRASZ" %in% corpus()$corpus){
-#'   coi <- "NADIRASZ"
-#'   s_attr_date <- "article_date"
-#' 
 #'   D <- Duplicates$new(
+#'     corpus = "NADIRASZ",
 #'     char_regex = "[a-zA-ZäöüÄÖÜ]",
 #'     p_attribute = "word",
-#'     s_attribute = s_attr_date,
+#'     s_attribute = "article_date",
 #'     date_preprocessor = NULL,
 #'     sample = 50L,
 #'     n = 1L,
 #'     threshold = 0.6 # default is 0.9
 #'   )
 #' 
-#'   article_bundle <- corpus(coi) |>
+#'   article_bundle <- corpus("NADIRASZ") |>
 #'     subset(article_date == "2000-01-01") |> 
 #'     split(s_attribute = "article_id")
 #' 
@@ -133,8 +131,11 @@ Duplicates <- R6::R6Class(
     
     #' @description 
     #' Initialize object of class `Duplicates`.
-    initialize = function(char_regex = "[a-zA-Z]", p_attribute = "word", s_attribute = "text_date", date_preprocessor = NULL, sample = 1000L, n = 1L, threshold = 0.9){
+    #' @param corpus ID of the CWB corpus that will be explored.
+    initialize = function(corpus, char_regex = "[a-zA-Z]", p_attribute = "word", s_attribute = "text_date", date_preprocessor = NULL, sample = 1000L, n = 1L, threshold = 0.9){
       
+      stopifnot(isFALSE(missing(corpus)))
+      self$corpus <- corpus
       self$char_regex <- char_regex
       self$s_attribute <- s_attribute
       self$p_attribute <- p_attribute
@@ -161,7 +162,7 @@ Duplicates <- R6::R6Class(
       if (verbose) message("... getting docs to be compared")
       dates <- unlist(lapply(setNames(x@objects, names(x)), function(y) s_attributes(y, self$s_attribute)))
       if (!is.null(self$date_preprocessor)) dates <- sapply(dates, self$date_preprocessor)
-      objectSplittedByDate <- split(1:length(x), f = dates)
+      objectSplittedByDate <- split(1L:length(x), f = dates)
       .get_comparisons <- function(i){
         dateOfDoc <- try(as.POSIXct(unname(dates[i])))
         if (is(dateOfDoc)[1] == "try-error"){
@@ -227,60 +228,60 @@ Duplicates <- R6::R6Class(
       duplicateList <- lapply(
         1L:length(similarities$i),
         function(i){
-          iName <- similarities$dimnames[[1]][similarities$i[i]]
-          jName <- similarities$dimnames[[1]] [similarities$j[i]]
-          iDate <- as.POSIXct(dates[[iName]])
-          iSize <- x@objects[iName][[1]]@size
-          jDate <- as.POSIXct(dates[[jName]])
-          jSize <- x@objects[jName][[1]]@size
+          i_name <- similarities$dimnames[[1]][similarities$i[i]]
+          j_name <- similarities$dimnames[[1]] [similarities$j[i]]
+          i_date <- as.POSIXct(dates[[i_name]])
+          i_size <- x@objects[i_name][[1]]@size
+          j_date <- as.POSIXct(dates[[j_name]])
+          j_size <- x@objects[j_name][[1]]@size
           value <- similarities$v[i]
-          if (iDate == jDate){
-            if (iSize >= jSize){
+          if (i_date == j_date){
+            if (i_size >= j_size){
               return(
                 c(
-                  name = iName,
-                  date = as.character(iDate),
-                  size = iSize,
-                  duplicate_name = jName,
-                  duplicate_date = as.character(jDate),
-                  duplicate_size = jSize,
+                  name = i_name,
+                  date = as.character(i_date),
+                  size = i_size,
+                  duplicate_name = j_name,
+                  duplicate_date = as.character(j_date),
+                  duplicate_size = j_size,
                   similarity=value
                 )
               )
             } else {
               return(
                 c(
-                  name = jName,
-                  date = as.character(jDate),
-                  size = jSize,
-                  duplicate_name = iName,
-                  duplicate_date = as.character(iDate),
-                  duplicate_size = iSize,
+                  name = j_name,
+                  date = as.character(j_date),
+                  size = j_size,
+                  duplicate_name = i_name,
+                  duplicate_date = as.character(i_date),
+                  duplicate_size = i_size,
                   similarity = value
                 )
               )
             }
-          } else if (iDate < jDate){
+          } else if (i_date < j_date){
             return(
               c(
-                name = iName,
-                date = as.character(iDate),
-                size = iSize,
-                duplicate_name = jName,
-                duplicate_date = as.character(jDate),
-                duplicate_size = jSize,
+                name = i_name,
+                date = as.character(i_date),
+                size = i_size,
+                duplicate_name = j_name,
+                duplicate_date = as.character(j_date),
+                duplicate_size = j_size,
                 similarity = value
               )
             )
-          } else if (iDate > jDate){
+          } else if (i_date > j_date){
             return(
               c(
-                name = jName,
-                date = as.character(jDate),
-                size = jSize,
-                duplicate_name = iName,
-                duplicate_date = as.character(iDate),
-                duplicate_size = iSize,
+                name = j_name,
+                date = as.character(j_date),
+                size = j_size,
+                duplicate_name = i_name,
+                duplicate_date = as.character(i_date),
+                duplicate_size = i_size,
                 similarity = value
               )
             )
@@ -309,9 +310,10 @@ Duplicates <- R6::R6Class(
     #' @return The updated content of slot `$duplicates` is returned invisibly.
     detect = function(x, n = 5L, character_selection = 1:12, how = "coop", verbose = TRUE, mc = FALSE, progress = TRUE){
       
-      self$corpus <- unique(sapply(x@objects, function(x) x@corpus))
-      stopifnot(length(self$corpus) == 1L)
-      
+      if (x@corpus != self$corpus){
+        stop("The corpus ID configured in the Duplicates engine and of the bundle are not identical.")
+      }
+
       if (verbose) cli_progress_step("counting characters")
       if (is.numeric(self$sample)){
         bundle_sample <- sample(x, size = self$sample)
@@ -418,21 +420,21 @@ Duplicates <- R6::R6Class(
     #' Turn data.table with duplicates into file with corpus positions and
     #' annotation of duplicates, generate cwb-s-encode command and execute it,
     #' if wanted.
-    annotate = function(sAttributeID){
+    annotate = function(s_attribute){
       
-      sAttr <- s_attributes(self$corpus, sAttributeID, unique = FALSE)
+      sAttr <- s_attributes(self$corpus, s_attribute, unique = FALSE)
       
       cposMatrix <- RcppCWB::get_region_matrix(
         corpus = self$corpus,
-        s_attribute = sAttributeID,
+        s_attribute = s_attribute,
         struc = 0L:(length(sAttr) - 1L)
       )
       colnames(cposMatrix) <- c("cpos_left", "cpos_right")
       
       cposDT <- data.table(cposMatrix)
-      cposDT[, sAttributeID := sAttr]
-      setnames(cposDT, old = "sAttributeID", new = sAttributeID)
-      setkeyv(cposDT, sAttributeID)
+      cposDT[, s_attribute := sAttr]
+      setnames(cposDT, old = "s_attribute", new = s_attribute)
+      setkeyv(cposDT, s_attribute)
       
       duplicates_df <- as.data.frame(self$duplicates[, c("name", "duplicate_name"), with = FALSE])
       G <- igraph::graph_from_data_frame(duplicates_df)
@@ -456,10 +458,10 @@ Duplicates <- R6::R6Class(
       setkeyv(duplicatesDT, "duplicate")
       
       self$annotation <- duplicatesDT[cposDT]
-      setnames(self$annotation, old = "duplicate", new = sAttributeID)
+      setnames(self$annotation, old = "duplicate", new = s_attribute)
       self$annotation[, "duplicate" := !is.na(self$annotation[["original"]])]
       self$annotation[, "original" := sapply(self$annotation[["original"]], function(x) ifelse(is.na(x), "", x))]
-      setcolorder(self$annotation, c("cpos_left", "cpos_right", sAttributeID, "duplicate", "original"))
+      setcolorder(self$annotation, c("cpos_left", "cpos_right", s_attribute, "duplicate", "original"))
       setorderv(self$annotation, cols = "cpos_left")
     },
     

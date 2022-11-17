@@ -32,20 +32,18 @@ appended by the duplicates that are newly detected.
 library(polmineR)
 
 if ("NADIRASZ" \%in\% corpus()$corpus){
-  coi <- "NADIRASZ"
-  s_attr_date <- "article_date"
-
   D <- Duplicates$new(
+    corpus = "NADIRASZ",
     char_regex = "[a-zA-ZäöüÄÖÜ]",
     p_attribute = "word",
-    s_attribute = s_attr_date,
+    s_attribute = "article_date",
     date_preprocessor = NULL,
     sample = 50L,
     n = 1L,
     threshold = 0.6 # default is 0.9
   )
 
-  article_bundle <- corpus(coi) |>
+  article_bundle <- corpus("NADIRASZ") |>
     subset(article_date == "2000-01-01") |> 
     split(s_attribute = "article_id")
 
@@ -113,7 +111,7 @@ duplicates.}
 \item \href{#method-Duplicates-get_comparisons}{\code{Duplicates$get_comparisons()}}
 \item \href{#method-Duplicates-similarities_matrix_to_dt}{\code{Duplicates$similarities_matrix_to_dt()}}
 \item \href{#method-Duplicates-detect}{\code{Duplicates$detect()}}
-\item \href{#method-Duplicates-makeAnnotation}{\code{Duplicates$makeAnnotation()}}
+\item \href{#method-Duplicates-annotate}{\code{Duplicates$annotate()}}
 \item \href{#method-Duplicates-encode}{\code{Duplicates$encode()}}
 \item \href{#method-Duplicates-clone}{\code{Duplicates$clone()}}
 }
@@ -125,6 +123,7 @@ duplicates.}
 Initialize object of class \code{Duplicates}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Duplicates$new(
+  corpus,
   char_regex = "[a-zA-Z]",
   p_attribute = "word",
   s_attribute = "text_date",
@@ -138,6 +137,8 @@ Initialize object of class \code{Duplicates}.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
+\item{\code{corpus}}{ID of the CWB corpus that will be explored.}
+
 \item{\code{char_regex}}{a regex defining the characters to keep}
 
 \item{\code{s_attribute}}{the s-attribute providing the date}
@@ -261,16 +262,23 @@ The updated content of slot \verb{$duplicates} is returned invisibly.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Duplicates-makeAnnotation"></a>}}
-\if{latex}{\out{\hypertarget{method-Duplicates-makeAnnotation}{}}}
-\subsection{Method \code{makeAnnotation()}}{
+\if{html}{\out{<a id="method-Duplicates-annotate"></a>}}
+\if{latex}{\out{\hypertarget{method-Duplicates-annotate}{}}}
+\subsection{Method \code{annotate()}}{
 Turn data.table with duplicates into file with corpus positions and
 annotation of duplicates, generate cwb-s-encode command and execute it,
 if wanted.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Duplicates$makeAnnotation(sAttributeID)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Duplicates$annotate(s_attribute)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{s_attribute}}{the s-attribute providing the date}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Duplicates-encode"></a>}}

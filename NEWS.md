@@ -10,6 +10,7 @@ duplicate detection workflow to save memory space.
 improve memory efficiency.
 * Method `Duplicates$detectDuplicates()` is `Duplicates$detect()` now.
 * Method `Duplicates$makeAnnotation()` renamed as `Duplicates$annotate()`.
+* New and required argument `corpus` when initializing `Duplicates` class.
 
 ## v0.2.0
 

@@ -95,8 +95,6 @@ if ("NADIRASZ" \%in\% corpus()$corpus){
 
 \item{\code{threshold}}{minimum similarity value to identify two texts as duplicates}
 
-\item{\code{comparisons}}{a \code{simple_triplet_matrix} with the texts to be compared}
-
 \item{\code{similarities}}{a \code{simple_triplet_matrix} with similarities of texts}
 
 \item{\code{datePrep}}{function to rework dates if not in the DD-MM-YYYY standard format}
@@ -109,7 +107,7 @@ if ("NADIRASZ" \%in\% corpus()$corpus){
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-Duplicates-new}{\code{Duplicates$new()}}
-\item \href{#method-Duplicates-getWhatToCompare}{\code{Duplicates$getWhatToCompare()}}
+\item \href{#method-Duplicates-get_comparisons}{\code{Duplicates$get_comparisons()}}
 \item \href{#method-Duplicates-makeDuplicateDataTable}{\code{Duplicates$makeDuplicateDataTable()}}
 \item \href{#method-Duplicates-detectDuplicates}{\code{Duplicates$detectDuplicates()}}
 \item \href{#method-Duplicates-makeAnnotation}{\code{Duplicates$makeAnnotation()}}
@@ -152,12 +150,12 @@ speed up character count}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Duplicates-getWhatToCompare"></a>}}
-\if{latex}{\out{\hypertarget{method-Duplicates-getWhatToCompare}{}}}
-\subsection{Method \code{getWhatToCompare()}}{
+\if{html}{\out{<a id="method-Duplicates-get_comparisons"></a>}}
+\if{latex}{\out{\hypertarget{method-Duplicates-get_comparisons}{}}}
+\subsection{Method \code{get_comparisons()}}{
 Identify documents that will be compared (based on date of documents).
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Duplicates$getWhatToCompare(
+\if{html}{\out{<div class="r">}}\preformatted{Duplicates$get_comparisons(
   x,
   reduce = TRUE,
   verbose = FALSE,

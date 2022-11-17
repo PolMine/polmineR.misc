@@ -120,9 +120,6 @@ Duplicates <- R6::R6Class(
     
     duplicates = NULL,
     
-    #' @field comparisons  a `simple_triplet_matrix` with the texts to be compared
-    comparisons = "simple_triplet_matrix",
-    
     #' @field similarities a \code{simple_triplet_matrix} with similarities of texts
     similarities = "simple_triplet_matrix",
     
@@ -149,7 +146,7 @@ Duplicates <- R6::R6Class(
     
     #' @description
     #' Identify documents that will be compared (based on date of documents).
-    getWhatToCompare = function(x, reduce = TRUE, verbose = FALSE, progress = TRUE, mc = FALSE){
+    get_comparisons = function(x, reduce = TRUE, verbose = FALSE, progress = TRUE, mc = FALSE){
 
       if (!self$s_attribute %in% s_attributes(self$corpus)){
         stop("no valid s-attribute in field 's_attribute'")
@@ -163,7 +160,7 @@ Duplicates <- R6::R6Class(
       dates <- unlist(lapply(setNames(x@objects, names(x)), function(y) s_attributes(y, self$s_attribute)))
       if (!is.null(self$datePrep)) dates <- sapply(dates, self$datePrep)
       objectSplittedByDate <- split(1:length(x), f = dates)
-      .getWhatToCompare <- function(i){
+      .get_comparisons <- function(i){
         dateOfDoc <- try(as.POSIXct(unname(dates[i])))
         if (is(dateOfDoc)[1] == "try-error"){
           warning(paste("cannot parse date:", dates[i]))
@@ -182,7 +179,7 @@ Duplicates <- R6::R6Class(
         datesToGet <- as.character(strftime(dateRange, format = "%Y-%m-%d"))
         unlist(lapply(datesToGet, function(y) objectSplittedByDate[[y]]))
       }
-      docsToCompare <- pblapply(1:length(x), FUN = .getWhatToCompare, cl = getOption("polmineR.cores"))
+      docsToCompare <- pblapply(1:length(x), FUN = .get_comparisons, cl = getOption("polmineR.cores"))
       
       docsToCompareMatrix <- simple_triplet_matrix(
         i = unlist(docsToCompare),
@@ -385,12 +382,12 @@ Duplicates <- R6::R6Class(
           dimnames = list(names(index_new), names(index_new))
         )
       } else {
-        if (verbose) cli_progress_step("identifying comparables")
-        self$comparisons <- self$getWhatToCompare(x = x, verbose = verbose, mc = mc, progress = progress)
+        if (verbose) cli_progress_step("identifying comparisons")
+        comparisons <- self$get_comparisons(x = x, verbose = verbose, mc = mc, progress = progress)
         
         if (verbose) cli_progress_step("calculating cosine similarity")
         self$similarities <- cosine_similarity(
-          x = ngram_matrix, y = self$comparisons,
+          x = ngram_matrix, y = comparisons,
           mc = mc, progress = progress
         )
         # here: If duplicates slot not empty, add rows

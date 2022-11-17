@@ -1,3 +1,10 @@
+## v0.2.0.9001
+
+* Class `Duplicates` used to be a base R reference class (defined by
+`setRefClass()`), it is now an R6 class (defined by `R6::R6Class()`).
+Precondition to use the functionality of roxygen2 for documenting R6 classes.
+
+
 ## v0.2.0
 
 * Method `Duplicates$detectDuplicates()` now has arguments `n` (passed into 

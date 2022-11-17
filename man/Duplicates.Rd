@@ -34,7 +34,7 @@ if ("NADIRASZ" \%in\% corpus()$corpus){
   D <- Duplicates$new(
     char_regex = "[a-zA-ZäöüÄÖÜ]",
     p_attribute = "word",
-    sAttribute = s_attr_date,
+    s_attribute = s_attr_date,
     datePrep = NULL,
     sample = 50L,
     n = 1L,
@@ -85,7 +85,7 @@ if ("NADIRASZ" \%in\% corpus()$corpus){
 
 \item{\code{p_attribute}}{the p-attribute used (defaults to "word")}
 
-\item{\code{sAttribute}}{the s-attribute of the date of a text in the corpus}
+\item{\code{s_attribute}}{the s-attribute of the date of a text in the corpus}
 
 \item{\code{sample}}{size of the sample of the \code{partition_bundle} that the character count is based on}
 
@@ -124,7 +124,7 @@ Initialize object of class \code{Duplicates}.
 \if{html}{\out{<div class="r">}}\preformatted{Duplicates$new(
   char_regex = "[a-zA-Z]",
   p_attribute = "word",
-  sAttribute = "text_date",
+  s_attribute = "text_date",
   datePrep = NULL,
   sample = 1000L,
   n = 1L,
@@ -137,7 +137,7 @@ Initialize object of class \code{Duplicates}.
 \describe{
 \item{\code{char_regex}}{a regex defining the characters to keep}
 
-\item{\code{sAttribute}}{the s-attribute providing the date}
+\item{\code{s_attribute}}{the s-attribute providing the date}
 
 \item{\code{sample}}{number of documents to define a subset of \code{partition_bundle} to
 speed up character count}

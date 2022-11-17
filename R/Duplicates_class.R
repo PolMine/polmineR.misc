@@ -22,7 +22,7 @@ NULL
 #' @param x a `partition_bundle` object defining the documents that will be
 #'   compared to detect duplicates
 #' @param char_regex a regex defining the characters to keep
-#' @param sAttribute the s-attribute providing the date
+#' @param s_attribute the s-attribute providing the date
 #' @param sample number of documents to define a subset of `partition_bundle` to
 #'   speed up character count
 #' @param n number of days before and after a document was published
@@ -49,7 +49,7 @@ NULL
 #'   D <- Duplicates$new(
 #'     char_regex = "[a-zA-ZäöüÄÖÜ]",
 #'     p_attribute = "word",
-#'     sAttribute = s_attr_date,
+#'     s_attribute = s_attr_date,
 #'     datePrep = NULL,
 #'     sample = 50L,
 #'     n = 1L,
@@ -107,8 +107,8 @@ Duplicates <- R6::R6Class(
     #' @field p_attribute the p-attribute used (defaults to "word")
     p_attribute = NULL,
     
-    #' @field sAttribute the s-attribute of the date of a text in the corpus
-    sAttribute = NULL,
+    #' @field s_attribute the s-attribute of the date of a text in the corpus
+    s_attribute = NULL,
     
     #' @field sample size of the sample of the `partition_bundle` that the character count is based on
     sample = NULL,
@@ -135,10 +135,10 @@ Duplicates <- R6::R6Class(
     
     #' @description 
     #' Initialize object of class `Duplicates`.
-    initialize = function(char_regex = "[a-zA-Z]", p_attribute = "word", sAttribute = "text_date", datePrep = NULL, sample = 1000L, n = 1L, threshold = 0.9){
+    initialize = function(char_regex = "[a-zA-Z]", p_attribute = "word", s_attribute = "text_date", datePrep = NULL, sample = 1000L, n = 1L, threshold = 0.9){
       
       self$char_regex <- char_regex
-      self$sAttribute <- sAttribute
+      self$s_attribute <- s_attribute
       self$p_attribute <- p_attribute
       self$sample <- as.integer(sample)
       self$n <- as.integer(n)
@@ -152,8 +152,8 @@ Duplicates <- R6::R6Class(
     #' Identify documents that will be compared (based on date of documents).
     getWhatToCompare = function(x, reduce = TRUE, verbose = FALSE, progress = TRUE, mc = FALSE){
 
-      if (!self$sAttribute %in% sAttributes(self$corpus)){
-        stop("no valid s-attribute in field 'sAttribute'")
+      if (!self$s_attribute %in% s_attributes(self$corpus)){
+        stop("no valid s-attribute in field 's_attribute'")
       }
       
       if (!requireNamespace("chron", quietly = TRUE)){
@@ -161,7 +161,7 @@ Duplicates <- R6::R6Class(
       }
       
       if (verbose) message("... getting docs to be compared")
-      dates <- unlist(lapply(setNames(x@objects, names(x)), function(y) sAttributes(y, self$sAttribute)))
+      dates <- unlist(lapply(setNames(x@objects, names(x)), function(y) s_attributes(y, self$s_attribute)))
       if (!is.null(self$datePrep)) dates <- sapply(dates, self$datePrep)
       objectSplittedByDate <- split(1:length(x), f = dates)
       .getWhatToCompare <- function(i){
@@ -211,7 +211,7 @@ Duplicates <- R6::R6Class(
       dates <- unlist(lapply(
         setNames(x@objects, names(x)),
         s_attributes,
-        s_attribute = self$sAttribute
+        s_attribute = self$s_attribute
       ))
       dates <- sapply(dates, self$datePrep)
       indexDuplicates <- which(self$similarityMatrix$v >= self$threshold)
@@ -337,10 +337,10 @@ Duplicates <- R6::R6Class(
         weigh(method = "tfidf")
       
       if (self$n == 0){
-        if (verbose) cli_progress_step(paste("getting dates, using s-attribute", self$sAttribute))
-        dates <- lapply(x@objects, s_attributes, s_attribute = self$sAttribute)
+        if (verbose) cli_progress_step(paste("getting dates, using s-attribute", self$s_attribute))
+        dates <- lapply(x@objects, s_attributes, s_attribute = self$s_attribute)
         
-        if (verbose) cli_progress_step(paste("create groups to compare", self$sAttribute))
+        if (verbose) cli_progress_step(paste("create groups to compare", self$s_attribute))
         groups <- split(x = names(dates), f = as.factor(unname(unlist(dates))))
         # drop groups with only one id (nothing to compare)
         for (i in rev(unname(which(sapply(groups, length) <= 1L))))
@@ -413,7 +413,7 @@ Duplicates <- R6::R6Class(
     #' if wanted.
     makeAnnotation = function(sAttributeID){
       
-      sAttr <- sAttributes(self$corpus, sAttributeID, unique = FALSE)
+      sAttr <- s_attributes(self$corpus, sAttributeID, unique = FALSE)
       
       cposMatrix <- RcppCWB::get_region_matrix(
         corpus = self$corpus,
@@ -487,7 +487,7 @@ Duplicates <- R6::R6Class(
         cat(content, file = filenames[[what]])
         encodeCmd <- .makeEncodeCmd(
           filenames[[what]],
-          attribute = paste(strsplit(self$sAttribute, "_")[[1]][1], what, sep="_")
+          attribute = paste(strsplit(self$s_attribute, "_")[[1]][1], what, sep="_")
         )
         cat(encodeCmd)
         cat("\n")

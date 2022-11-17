@@ -70,10 +70,8 @@ NULL
 #'     threshold = 0.6 # default is 0.9
 #'   )
 #' 
-#'   sample_days <- s_attributes(coi, s_attr_date)[1:2]
-#' 
 #'   article_bundle <- corpus(coi) |>
-#'     subset(article_date %in% sample_days) |> 
+#'     subset(article_date == "2000-01-01") |> 
 #'     split(s_attribute = "article_id")
 #' 
 #'   D$detectDuplicates(x = article_bundle, mc = 3L)
@@ -197,12 +195,12 @@ Duplicates <- setRefClass(
       
       "Turn similarities of documents into a data.table that identifies original document and duplicate."
       
-      if (verbose) message("... applying threshold")
       if (mc == FALSE) mc <- 1L
       dates <- unlist(lapply(
         setNames(x@objects, names(x)),
-        function(y) sAttributes(y, .self$sAttribute))
-      )
+        s_attributes,
+        s_attribute = .self$sAttribute
+      ))
       dates <- sapply(dates, .self$datePrep)
       indexDuplicates <- which(.self$similarityMatrix$v >= .self$threshold)
       
@@ -212,7 +210,9 @@ Duplicates <- setRefClass(
       }
       
       # keep only those values in similarity matrix that are above the threshold
-      for (what in c("i", "j", "v")) .self$similarityMatrix[[what]] <- .self$similarityMatrix[[what]][indexDuplicates]  
+      for (what in c("i", "j", "v"))
+        .self$similarityMatrix[[what]] <- .self$similarityMatrix[[what]][indexDuplicates]  
+      
       duplicateList <- lapply(
         1L:length(.self$similarityMatrix$i),
         function(i){
@@ -291,7 +291,9 @@ Duplicates <- setRefClass(
     #' @param character_selection Numeric/integer vector used for indexing
     #'   `$charCount` to select the characters to keep. Defaults to 1:12, in
     #'   line with Kliche et al. 2014: 695.
-    detectDuplicates = function(x, n = 5L, character_selection = 1:12, verbose = TRUE, mc = FALSE, progress = TRUE){
+    #' @param how Implementation used to compute similarities - passed into 
+    #'   `cosine_similarity()`.
+    detectDuplicates = function(x, n = 5L, character_selection = 1:12, how = "coop", verbose = TRUE, mc = FALSE, progress = TRUE){
       
       "Wrapper that implements the entire workflow for duplicate detection."
 
@@ -324,38 +326,53 @@ Duplicates <- setRefClass(
 
       if (.self$n == 0){
         if (verbose) cli_progress_step(paste("getting dates, using s-attribute", .self$sAttribute))
-        dates <- pblapply(x@objects, function(P) sAttributes(P, .self$sAttribute))
+        dates <- lapply(x@objects, s_attributes, s_attribute = .self$sAttribute)
+        
+        if (verbose) cli_progress_step(paste("create groups to compare", .self$sAttribute))
         groups <- split(x = names(dates), f = as.factor(unname(unlist(dates))))
         # drop groups with only one id (nothing to compare)
-        for (i in rev(unname(which(sapply(groups, length) <= 1)))) groups[[i]] <- NULL
+        for (i in rev(unname(which(sapply(groups, length) <= 1L))))
+          groups[[i]] <- NULL
         
         if (verbose) cli_progress_step("compute similarities")
-        Ms <- pblapply(
-          groups,
-          function(ids){
-            M <- as.matrix(.self$ngramDocumentMatrix[,ids])
-            empty_rows <- unname(which(rowSums(M) == 0))
-            if (length(empty_rows) > 0L) M <- M[-empty_rows,]
-            C <- cosine_similarity(x = t(M), how = "proxy")
-            dt <- data.table(melt(as.matrix(C), variable.factor = FALSE))
-            a_is_b <- which(ifelse(dt[["Var1"]] == dt[["Var2"]], TRUE, FALSE) == TRUE)
-            if (length(a_is_b) > 0L) dt <- dt[-a_is_b]
-            dt
+        .get_similarities <- function(groupname){
+          if (verbose) message("... compute similarities for: ", groupname)
+          ids <- groups[[groupname]]
+          m <- as.matrix(.self$ngramDocumentMatrix[,ids])
+          empty_rows <- unname(which(rowSums(m) == 0L))
+          if (length(empty_rows) > 0L) m <- m[-empty_rows,]
+          sim <- cosine_similarity(x = t(m), how = how)
+          dt <- data.table(reshape2::melt(as.matrix(sim)))
+          a_is_b <- which(ifelse(dt[["Var1"]] == dt[["Var2"]], TRUE, FALSE))
+          if (length(a_is_b) > 0L) dt <- dt[-a_is_b]
+          dt[value >= .self$threshold]
+        }
+        if (progress){
+          dts <- pblapply(names(groups), .get_similarities, cl = mc)
+        } else {
+          if (mc){
+            dts <- mclapply(names(groups), .get_similarities, mc.cores = mc)
+          } else {
+            dts <- lapply(names(groups), .get_similarities)
           }
-        )
-        simDT <- rbindlist(Ms)
+        }
+        dt <- rbindlist(dts)
+        
+        if (verbose) cli_progress_step("create simple_triplet_matrix")
         # factors in columns - turn it into character vectors
-        for (col in c("Var1", "Var2")) simDT[[col]] <- as.character(simDT[[col]])
-        ids <- unique(c(simDT[["Var1"]], simDT[["Var2"]]))
+        for (col in c("Var1", "Var2")) dt[, (col) := as.character(dt[[col]])]
+        ids <- unique(c(dt[["Var1"]], dt[["Var2"]]))
         index_new <- setNames(1L:length(ids), ids)
-        simDT[["i"]] <- unname( index_new[ simDT[["Var1"]] ] )
-        simDT[["j"]] <- unname( index_new[ simDT[["Var2"]] ] )
+        dt[, "i" := unname( index_new[dt[["Var1"]]] )]
+        dt[, "j" := unname( index_new[dt[["Var2"]]] )]
         # keep only one similarity score per pair
-        # simDTmin <- simDT[which(ifelse(simDT[["i"]] < simDT[["j"]], TRUE, FALSE) == TRUE)]
+        dt <- dt[which(ifelse(dt[["i"]] < dt[["j"]], TRUE, FALSE))]
         .self$similarityMatrix <- simple_triplet_matrix(
-          i = simDT[["i"]], j = simDT[["j"]], v = simDT[["value"]],
+          i = dt[["i"]], j = dt[["j"]], v = dt[["value"]],
+          nrow = length(index_new),
+          ncol = length(index_new),
           dimnames = list(names(index_new), names(index_new))
-          )
+        )
       } else {
         if (verbose) cli_progress_step("identifying comparables")
         .self$whatToCompare <- .self$getWhatToCompare(x = x, verbose = verbose, mc = mc, progress = progress)

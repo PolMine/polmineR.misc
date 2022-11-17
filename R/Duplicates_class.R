@@ -12,12 +12,14 @@ NULL
 #' (see \url{http://www.lrec-conf.org/proceedings/lrec2014/pdf/332_Paper.pdf}).
 #' 
 #' To detect duplicates, choices are made as follows:
-#' (a) If two similar articles have been published on the same day, the shorter article will
-#' be considered the duplicate; (b) if two similar articles were published on different days,
+#' - If two similar articles have been published on the same day, the shorter article will
+#' be considered the duplicate;
+#' - if two similar articles were published on different days,
 #' the article that appeared later will be considered the duplicate.
 #' 
-#' Different `partition_bundle`-objects can be passed into the \code{detectDuplicates}-method successively. The field
-#' \code{duplicates} will be appended by the duplicates that are newly detected. 
+#' Different `partition_bundle`-objects can be passed into the
+#' \code{detectDuplicates}-method successively. The field `duplicates` will be
+#' appended by the duplicates that are newly detected.
 #' 
 #' @param x a `partition_bundle` object defining the documents that will be
 #'   compared to detect duplicates
@@ -118,14 +120,14 @@ Duplicates <- R6::R6Class(
     
     duplicates = NULL,
     
-    #' @field whatToCompare  a `simple_triplet_matrix` with the texts to be compared
-    whatToCompare = "simple_triplet_matrix",
+    #' @field comparisons  a `simple_triplet_matrix` with the texts to be compared
+    comparisons = "simple_triplet_matrix",
     
-    #' @field similarityMatrix a \code{simple_triplet_matrix} with similarities of texts
-    similarityMatrix = "simple_triplet_matrix",
+    #' @field similarities a \code{simple_triplet_matrix} with similarities of texts
+    similarities = "simple_triplet_matrix",
     
-    #' @field ngramDocumentMatrix a matrix (inheriting from \code{TermDocumentMatrix}) with ngram counts in the documents of the `partition_bundle`
-    ngramDocumentMatrix = "TermDocumentMatrix",
+    #' @field ngrams a matrix (inheriting from \code{TermDocumentMatrix}) with ngram counts in the documents of the `partition_bundle`
+    ngrams = "TermDocumentMatrix",
     
     #' @field datePrep function to rework dates if not in the DD-MM-YYYY standard format
     datePrep = "function",
@@ -214,7 +216,7 @@ Duplicates <- R6::R6Class(
         s_attribute = self$s_attribute
       ))
       dates <- sapply(dates, self$datePrep)
-      indexDuplicates <- which(self$similarityMatrix$v >= self$threshold)
+      indexDuplicates <- which(self$similarities$v >= self$threshold)
       
       if (length(indexDuplicates) == 0L){
         message("... no duplicates found")
@@ -223,18 +225,18 @@ Duplicates <- R6::R6Class(
       
       # keep only those values in similarity matrix that are above the threshold
       for (what in c("i", "j", "v"))
-        self$similarityMatrix[[what]] <- self$similarityMatrix[[what]][indexDuplicates]  
+        self$similarities[[what]] <- self$similarities[[what]][indexDuplicates]  
       
       duplicateList <- lapply(
-        1L:length(self$similarityMatrix$i),
+        1L:length(self$similarities$i),
         function(i){
-          iName <- self$similarityMatrix$dimnames[[1]][self$similarityMatrix$i[i]]
-          jName <- self$similarityMatrix$dimnames[[1]] [self$similarityMatrix$j[i]]
+          iName <- self$similarities$dimnames[[1]][self$similarities$i[i]]
+          jName <- self$similarities$dimnames[[1]] [self$similarities$j[i]]
           iDate <- as.POSIXct(dates[[iName]])
           iSize <- x@objects[iName][[1]]@size
           jDate <- as.POSIXct(dates[[jName]])
           jSize <- x@objects[jName][[1]]@size
-          value <- self$similarityMatrix$v[i]
+          value <- self$similarities$v[i]
           if (iDate == jDate){
             if (iSize >= jSize){
               return(
@@ -333,7 +335,7 @@ Duplicates <- R6::R6Class(
       ngram_bundle <- ngrams(x, n = n, char = names(self$char_count[character_selection]), mc = mc, progress = progress)
       
       if (verbose) cli_progress_step("assemble ngram matrix")
-      self$ngramDocumentMatrix <- as.TermDocumentMatrix(ngram_bundle, col = "count") |>
+      self$ngrams <- as.TermDocumentMatrix(ngram_bundle, col = "count") |>
         weigh(method = "tfidf")
       
       if (self$n == 0){
@@ -350,7 +352,7 @@ Duplicates <- R6::R6Class(
         .get_similarities <- function(groupname){
           if (verbose) message("... compute similarities for: ", groupname)
           ids <- groups[[groupname]]
-          m <- as.matrix(self$ngramDocumentMatrix[,ids])
+          m <- as.matrix(self$ngrams[,ids])
           empty_rows <- unname(which(rowSums(m) == 0L))
           if (length(empty_rows) > 0L) m <- m[-empty_rows,]
           sim <- cosine_similarity(x = t(m), how = how)
@@ -379,7 +381,7 @@ Duplicates <- R6::R6Class(
         dt[, "j" := unname( index_new[dt[["Var2"]]] )]
         # keep only one similarity score per pair
         dt <- dt[which(ifelse(dt[["i"]] < dt[["j"]], TRUE, FALSE))]
-        self$similarityMatrix <- simple_triplet_matrix(
+        self$similarities <- simple_triplet_matrix(
           i = dt[["i"]], j = dt[["j"]], v = dt[["value"]],
           nrow = length(index_new),
           ncol = length(index_new),
@@ -387,11 +389,11 @@ Duplicates <- R6::R6Class(
         )
       } else {
         if (verbose) cli_progress_step("identifying comparables")
-        self$whatToCompare <- self$getWhatToCompare(x = x, verbose = verbose, mc = mc, progress = progress)
+        self$comparisons <- self$getWhatToCompare(x = x, verbose = verbose, mc = mc, progress = progress)
         
         if (verbose) cli_progress_step("calculating cosine similarity")
-        self$similarityMatrix <- cosine_similarity(
-          x = self$ngramDocumentMatrix, y = self$whatToCompare,
+        self$similarities <- cosine_similarity(
+          x = self$ngrams, y = self$comparisons,
           mc = mc, progress = progress
         )
         # here: If duplicates slot not empty, add rows

@@ -17,12 +17,16 @@ ExplorationWorkbench" presented at LREC 2014
 (see \url{http://www.lrec-conf.org/proceedings/lrec2014/pdf/332_Paper.pdf}).
 
 To detect duplicates, choices are made as follows:
-(a) If two similar articles have been published on the same day, the shorter article will
-be considered the duplicate; (b) if two similar articles were published on different days,
+\itemize{
+\item If two similar articles have been published on the same day, the shorter article will
+be considered the duplicate;
+\item if two similar articles were published on different days,
 the article that appeared later will be considered the duplicate.
+}
 
-Different \code{partition_bundle}-objects can be passed into the \code{detectDuplicates}-method successively. The field
-\code{duplicates} will be appended by the duplicates that are newly detected.
+Different \code{partition_bundle}-objects can be passed into the
+\code{detectDuplicates}-method successively. The field \code{duplicates} will be
+appended by the duplicates that are newly detected.
 }
 \examples{
 library(polmineR)
@@ -91,9 +95,9 @@ if ("NADIRASZ" \%in\% corpus()$corpus){
 
 \item{\code{threshold}}{minimum similarity value to identify two texts as duplicates}
 
-\item{\code{whatToCompare}}{a \code{simple_triplet_matrix} with the texts to be compared}
+\item{\code{comparisons}}{a \code{simple_triplet_matrix} with the texts to be compared}
 
-\item{\code{similarityMatrix}}{a \code{simple_triplet_matrix} with similarities of texts}
+\item{\code{similarities}}{a \code{simple_triplet_matrix} with similarities of texts}
 
 \item{\code{ngramDocumentMatrix}}{a matrix (inheriting from \code{TermDocumentMatrix}) with ngram counts in the documents of the \code{partition_bundle}}
 

@@ -2,12 +2,12 @@ Package: polmineR.misc
 Type: Package
 Title: polmineR.misc
 Version: 0.2.1
-Date: 2022-11-17
+Date: 2022-11-18
 Author: Andreas Blaette
 Maintainer: Andreas Blaette <andreas.blaette@uni-due.de>
 Imports:
     R6,
-    polmineR,
+    polmineR (>= 0.8.7.9007),
     slam,
     bigmemory,
     bigalgebra,

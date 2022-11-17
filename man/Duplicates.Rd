@@ -33,7 +33,7 @@ if ("NADIRASZ" \%in\% corpus()$corpus){
 
   D <- Duplicates$new(
     char_regex = "[a-zA-ZäöüÄÖÜ]",
-    pAttribute = "word",
+    p_attribute = "word",
     sAttribute = s_attr_date,
     datePrep = NULL,
     sample = 50L,
@@ -83,7 +83,7 @@ if ("NADIRASZ" \%in\% corpus()$corpus){
 
 \item{\code{n}}{Number of days before and after a document was published.}
 
-\item{\code{pAttribute}}{the p-attribute used (defaults to "word")}
+\item{\code{p_attribute}}{the p-attribute used (defaults to "word")}
 
 \item{\code{sAttribute}}{the s-attribute of the date of a text in the corpus}
 
@@ -123,7 +123,7 @@ Initialize object of class \code{Duplicates}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Duplicates$new(
   char_regex = "[a-zA-Z]",
-  pAttribute = "word",
+  p_attribute = "word",
   sAttribute = "text_date",
   datePrep = NULL,
   sample = 1000L,

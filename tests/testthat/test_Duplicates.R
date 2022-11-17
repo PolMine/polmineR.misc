@@ -8,7 +8,7 @@ test_that(
       
       D <- Duplicates$new(
         char_regex = "[a-zA-ZäöüÄÖÜ]",
-        pAttribute = "word",
+        p_attribute = "word",
         sAttribute = "article_date",
         datePrep = NULL,
         sample = 50L,
@@ -38,7 +38,7 @@ test_that(
 
       D <- Duplicates$new(
         char_regex = "[a-zA-ZäöüÄÖÜ]",
-        pAttribute = "word",
+        p_attribute = "word",
         sAttribute = "article_date",
         datePrep = NULL,
         sample = 50L,

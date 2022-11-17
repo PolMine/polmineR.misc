@@ -48,7 +48,7 @@ NULL
 #' 
 #'   D <- Duplicates$new(
 #'     char_regex = "[a-zA-ZäöüÄÖÜ]",
-#'     pAttribute = "word",
+#'     p_attribute = "word",
 #'     sAttribute = s_attr_date,
 #'     datePrep = NULL,
 #'     sample = 50L,
@@ -104,8 +104,8 @@ Duplicates <- R6::R6Class(
     #' @field n Number of days before and after a document was published.
     n = NULL,
     
-    #' @field pAttribute the p-attribute used (defaults to "word")
-    pAttribute = NULL,
+    #' @field p_attribute the p-attribute used (defaults to "word")
+    p_attribute = NULL,
     
     #' @field sAttribute the s-attribute of the date of a text in the corpus
     sAttribute = NULL,
@@ -135,11 +135,11 @@ Duplicates <- R6::R6Class(
     
     #' @description 
     #' Initialize object of class `Duplicates`.
-    initialize = function(char_regex = "[a-zA-Z]", pAttribute = "word", sAttribute = "text_date", datePrep = NULL, sample = 1000L, n = 1L, threshold = 0.9){
+    initialize = function(char_regex = "[a-zA-Z]", p_attribute = "word", sAttribute = "text_date", datePrep = NULL, sample = 1000L, n = 1L, threshold = 0.9){
       
       self$char_regex <- char_regex
       self$sAttribute <- sAttribute
-      self$pAttribute <- pAttribute
+      self$p_attribute <- p_attribute
       self$sample <- as.integer(sample)
       self$n <- as.integer(n)
       self$threshold <- threshold
@@ -316,14 +316,14 @@ Duplicates <- R6::R6Class(
       if (is.numeric(self$sample)){
         bundle_sample <- sample(x, size = self$sample)
         charcount <- nchars(
-          bundle_sample, pAttribute = self$pAttribute, regexCharsToKeep = self$char_regex,
+          bundle_sample, p_attribute = self$p_attribute, regexCharsToKeep = self$char_regex,
           toLower = TRUE, decreasing = FALSE,
           mc = FALSE, progress = progress
         )
         rm(bundle_sample)
       } else {
         charcount <- nchars(
-          x, self$pAttribute, regexCharsToKeep = self$char_regex, toLower = TRUE, decreasing = FALSE,
+          x, self$p_attribute, regexCharsToKeep = self$char_regex, toLower = TRUE, decreasing = FALSE,
           mc = FALSE, progress = progress
         )
       }

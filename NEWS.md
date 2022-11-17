@@ -1,4 +1,4 @@
-## v0.2.0.9001
+## v0.2.1
 
 * Class `Duplicates` used to be a base R reference class (defined by
 `setRefClass()`), it is now an R6 class (defined by `R6::R6Class()`).

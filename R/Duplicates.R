@@ -60,7 +60,7 @@ NULL
 #'     subset(article_date == "2000-01-01") |> 
 #'     split(s_attribute = "article_id")
 #' 
-#'   D$detect(x = article_bundle, mc = 3L)
+#'   D$detect(x = article_bundle, mc = 3L, progress = FALSE)
 #'   
 #'   # To inspect result
 #'   D$duplicates
@@ -132,6 +132,9 @@ Duplicates <- R6::R6Class(
     #' @description 
     #' Initialize object of class `Duplicates`.
     #' @param corpus ID of the CWB corpus that will be explored.
+    #' @param p_attribute The p-attribute to evaluate.
+    #' @param date_preprocessor A function used to preprocess dates as extracted
+    #'   from `s_attribute`.
     initialize = function(corpus, char_regex = "[a-zA-Z]", p_attribute = "word", s_attribute = "text_date", date_preprocessor = NULL, sample = 1000L, n = 1L, threshold = 0.9){
       
       stopifnot(isFALSE(missing(corpus)))
@@ -149,6 +152,7 @@ Duplicates <- R6::R6Class(
     
     #' @description
     #' Identify documents that will be compared (based on date of documents).
+    #' @param reduce A `logical` value, whether to drop one half of matrix.
     get_comparisons = function(x, reduce = TRUE, verbose = FALSE, progress = TRUE, mc = FALSE){
 
       if (!self$s_attribute %in% s_attributes(self$corpus)){
@@ -159,7 +163,7 @@ Duplicates <- R6::R6Class(
         stop("the 'chron'-package needs to be installed but is not available")
       }
       
-      if (verbose) message("... getting docs to be compared")
+      if (verbose) cli_progress_step("getting docs to be compared")
       dates <- unlist(lapply(setNames(x@objects, names(x)), function(y) s_attributes(y, self$s_attribute)))
       if (!is.null(self$date_preprocessor)) dates <- sapply(dates, self$date_preprocessor)
       objectSplittedByDate <- split(1L:length(x), f = dates)
@@ -193,7 +197,7 @@ Duplicates <- R6::R6Class(
         dimnames = list(rows = names(x), columns = names(x))
       )
       if (reduce){
-        if (verbose) message("... reduction of document comparisons")
+        if (verbose) cli_progress_step("reduction of document comparisons")
         keepOrDrop <- ifelse(docsToCompareMatrix$i < docsToCompareMatrix$j, TRUE, FALSE)
         for (x in c("i", "j", "v")) docsToCompareMatrix[[x]] <- docsToCompareMatrix[[x]][keepOrDrop]
       }
@@ -308,34 +312,35 @@ Duplicates <- R6::R6Class(
     #' @param how Implementation used to compute similarities - passed into 
     #'   `cosine_similarity()`.
     #' @return The updated content of slot `$duplicates` is returned invisibly.
+    #' @importFrom cli cli_alert_info col_blue
     detect = function(x, n = 5L, character_selection = 1:12, how = "coop", verbose = TRUE, mc = FALSE, progress = TRUE){
       
       if (x@corpus != self$corpus){
         stop("The corpus ID configured in the Duplicates engine and of the bundle are not identical.")
       }
 
-      if (verbose) cli_progress_step("counting characters")
-      if (is.numeric(self$sample)){
-        bundle_sample <- sample(x, size = self$sample)
-        charcount <- nchars(
-          bundle_sample, p_attribute = self$p_attribute, regexCharsToKeep = self$char_regex,
-          toLower = TRUE, decreasing = FALSE,
-          mc = FALSE, progress = progress
-        )
-        rm(bundle_sample)
-      } else {
-        charcount <- nchars(
-          x, self$p_attribute, regexCharsToKeep = self$char_regex, toLower = TRUE, decreasing = FALSE,
+      if (is.null(self$char_count)){
+        if (verbose) cli_progress_step("counting characters")
+        self$char_count <- nchars(
+          x = if (is.numeric(self$sample)) sample(x, size = self$sample) else (x),
+          p_attribute = self$p_attribute, regexCharsToKeep = self$char_regex, toLower = TRUE, decreasing = FALSE,
           mc = FALSE, progress = progress
         )
       }
-      self$char_count <- setNames(as.numeric(charcount), names(charcount))
+      cli::cli_alert_info(
+        sprintf(
+          "letters used for shingling: %s",
+          col_blue(
+            paste(names(self$char_count[character_selection]), collapse = "")
+          )
+        )
+      )
       
       if (verbose) cli_progress_step("get data for ngram matrix")
       ngram_bundle <- ngrams(x, n = n, char = names(self$char_count[character_selection]), mc = mc, progress = progress)
       
       if (verbose) cli_progress_step("assemble ngram matrix")
-      ngram_matrix <- as.TermDocumentMatrix(ngram_bundle, col = "count") |>
+      ngram_matrix <- as.TermDocumentMatrix(ngram_bundle, col = "count", verbose = FALSE) |>
         weigh(method = "tfidf")
       
       if (self$n == 0){
@@ -350,7 +355,7 @@ Duplicates <- R6::R6Class(
         
         if (verbose) cli_progress_step("compute similarities")
         .get_similarities <- function(groupname){
-          if (verbose) message("... compute similarities for: ", groupname)
+          if (verbose) cli_progress_step("compute similarities for: ", groupname)
           ids <- groups[[groupname]]
           m <- as.matrix(ngram_matrix[,ids])
           empty_rows <- unname(which(rowSums(m) == 0L))
@@ -394,7 +399,8 @@ Duplicates <- R6::R6Class(
         if (verbose) cli_progress_step("calculating cosine similarity")
         similarities <- cosine_similarity(
           x = ngram_matrix, y = comparisons,
-          mc = mc, progress = progress
+          mc = mc, progress = progress,
+          verbose = FALSE
         )
         # here: If duplicates slot not empty, add rows
       }
@@ -468,6 +474,8 @@ Duplicates <- R6::R6Class(
     #' @description´
     #' Add structural attributes to CWB corpus based on the annotation data that
     #' has been generated (data.table in field annotation).
+    #' @param exec A `logical` value, whether to execute system command.
+    #' @param filenames List of filenames.
     encode = function(exec = FALSE, filenames = list(duplicate = tempfile(), original = tempfile())){
       
       # helper function 

@@ -1,7 +1,7 @@
 Package: polmineR.misc
 Type: Package
 Title: polmineR.misc
-Version: 0.2.0
+Version: 0.2.1
 Date: 2022-11-17
 Author: Andreas Blaette
 Maintainer: Andreas Blaette <andreas.blaette@uni-due.de>
@@ -18,7 +18,8 @@ Imports:
     dplyr,
     methods,
     RcppCWB,
-    cli
+    cli,
+    stringi
 Suggests:
     testthat
 Description: Miscellaneaous extensions for the polmineR base package.
@@ -26,7 +27,7 @@ Encoding: UTF-8
 License: GPL-3
 Collate:
     'polmineR.misc_package.R'
-    'Duplicates_class.R'
+    'Duplicates.R'
     'Hitanalysis_class.R'
     'SentenceSimilarity.R'
     'Word2Vec.R'
@@ -42,7 +43,7 @@ Collate:
     'egoNetwork_method.R'
     'hunspell_method.R'
     'label_method.R'
-    'nchars_method.R'
+    'nchars.R'
     'pAttribute_method.R'
     'selectLabel_function.R'
     'validate_method.R'

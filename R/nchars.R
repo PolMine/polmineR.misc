@@ -45,7 +45,8 @@ setMethod("nchars", "partition", function(x, p_attribute = "word", regexCharsToK
   if(!is.null(regexCharsToKeep)){
     charCount <- charCount[grep(regexCharsToKeep, names(charCount))]
   }
-  charCount[order(charCount, decreasing = decreasing)]
+  y <- charCount[order(charCount, decreasing = decreasing)]
+  setNames(as.integer(y), names(y))
 })
 
 #' @rdname nchars
@@ -77,7 +78,8 @@ setMethod("nchars", "partition_bundle", function(x, mc = FALSE, progress = TRUE,
     FUN = sum
   )
   
-  charCount[order(charCount, decreasing = decreasing)]
+  y <- charCount[order(charCount, decreasing = decreasing)]
+  setNames(as.integer(y), names(y))
 })
 
 #' @rdname nchars
@@ -88,4 +90,35 @@ setMethod("nchars", "subcorpus_bundle", function(x, decreasing = TRUE, mc = FALS
     mc = mc,
     progress = progress
   )
+})
+
+#' @param sample An `integer` or `numeric` value defining the number of sample
+#'   tokens extracted from the (entirely decoded) token stream to be evaluated.
+#' @rdname nchars
+#' @importFrom polmineR decode
+#' @importFrom stringi stri_count_fixed stri_opts_fixed
+#' @examples
+#' library(polmineR)
+#' use("RcppCWB")
+#' n <- corpus("REUTERS") %>% nchars(sample = 4000)
+setMethod("nchars", "corpus", function(x, p_attribute = "word", toLower = TRUE, sample = 5000000L, regexCharsToKeep = "[a-zA-Z]", decreasing = TRUE, mc = FALSE, progress = TRUE){
+  # optime get_token_stream(), use it here and callNextMethod() for 
+  # partition- and subcorpus-method
+  tokens <- decode(
+    0L:(x@size - 1L),
+    corpus = x,
+    boost = TRUE,
+    p_attributes = p_attribute
+  )
+  if (isTRUE(toLower)) tokens <- tolower(tokens)
+  if (is.numeric(sample)){
+    tokens <- sample(tokens, size = sample)
+    gc()
+  }
+  
+  n <- table(unlist(strsplit(tokens, "")))
+  if(!is.null(regexCharsToKeep)) n <- n[grep(regexCharsToKeep, names(n))]
+  
+  y <- n[order(n, decreasing = decreasing)]
+  setNames(as.integer(y), names(y))
 })

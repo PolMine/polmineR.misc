@@ -47,7 +47,7 @@ if ("NADIRASZ" \%in\% corpus()$corpus){
     subset(article_date == "2000-01-01") |> 
     split(s_attribute = "article_id")
 
-  D$detect(x = article_bundle, mc = 3L)
+  D$detect(x = article_bundle, mc = 3L, progress = FALSE)
   
   # To inspect result
   D$duplicates

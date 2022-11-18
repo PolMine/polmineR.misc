@@ -1,3 +1,11 @@
+## v0.2.1.9001
+
+* Unused arguments `mc` and `progress` removed from `nchars()` method for `corpus` 
+to avoid illussion they could make a difference.
+* Method `nchars()` for `corpus` objects has argument `verbose`.
+* Argument `toLower` of method `nchars()` is now `lowercase`.
+* Argument `regexCharsToKeep` renamed as `char_regex`.
+
 ## v0.2.1
 
 * Class `Duplicates` used to be a base R reference class (defined by

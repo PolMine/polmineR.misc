@@ -14,16 +14,16 @@ nchars(x, ...)
 \S4method{nchars}{partition}(
   x,
   p_attribute = "word",
-  regexCharsToKeep = "[a-zA-Z]",
-  toLower = TRUE,
+  char_regex = "[a-zA-Z]",
+  lowercase = TRUE,
   decreasing = TRUE
 )
 
 \S4method{nchars}{subcorpus}(
   x,
   p_attribute = "word",
-  regexCharsToKeep = "[a-zA-Z]",
-  toLower = TRUE,
+  char_regex = "[a-zA-Z]",
+  lowercase = TRUE,
   decreasing = TRUE
 )
 
@@ -34,12 +34,11 @@ nchars(x, ...)
 \S4method{nchars}{corpus}(
   x,
   p_attribute = "word",
-  toLower = TRUE,
+  lowercase = TRUE,
   sample = 5000000L,
-  regexCharsToKeep = "[a-zA-Z]",
+  char_regex = "[a-zA-Z]",
   decreasing = TRUE,
-  mc = FALSE,
-  progress = TRUE
+  verbose = TRUE
 )
 }
 \arguments{
@@ -49,9 +48,9 @@ nchars(x, ...)
 
 \item{p_attribute}{the p-attribute}
 
-\item{regexCharsToKeep}{if NULL, counts for all charactrs will be returned, else a regex indicating which characters to include in the counting}
+\item{char_regex}{if NULL, counts for all charactrs will be returned, else a regex indicating which characters to include in the counting}
 
-\item{toLower}{whether to lower tokens}
+\item{lowercase}{whether to lower tokens}
 
 \item{decreasing}{logical, passed into order call}
 
@@ -61,6 +60,8 @@ nchars(x, ...)
 
 \item{sample}{An \code{integer} or \code{numeric} value defining the number of sample
 tokens extracted from the (entirely decoded) token stream to be evaluated.}
+
+\item{verbose}{Whether to output progress messages.}
 }
 \description{
 Count the number of characters

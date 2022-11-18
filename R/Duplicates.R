@@ -323,7 +323,7 @@ Duplicates <- R6::R6Class(
         if (verbose) cli_progress_step("counting characters")
         self$char_count <- nchars(
           x = if (is.numeric(self$sample)) sample(x, size = self$sample) else (x),
-          p_attribute = self$p_attribute, regexCharsToKeep = self$char_regex, toLower = TRUE, decreasing = FALSE,
+          p_attribute = self$p_attribute, regexCharsToKeep = self$char_regex, lowercase = TRUE, decreasing = FALSE,
           mc = FALSE, progress = progress
         )
       }

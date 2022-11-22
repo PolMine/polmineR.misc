@@ -5,6 +5,9 @@ to avoid illussion they could make a difference.
 * Method `nchars()` for `corpus` objects has argument `verbose`.
 * Argument `toLower` of method `nchars()` is now `lowercase`.
 * Argument `regexCharsToKeep` renamed as `char_regex`.
+* Progress messages of `Duplicates` method polished.
+* `Duplicates$detect()` reports number of duplicates detected if `verbose` is
+`TRUE`.
 
 ## v0.2.1
 

@@ -38,7 +38,7 @@ NULL
 #' @importFrom pbapply pblapply
 #' @importFrom stats setNames
 #' @importFrom RcppCWB get_region_matrix
-#' @importFrom cli cli_progress_step
+#' @importFrom cli cli_progress_step cli_progress_done
 #' @importFrom R6 R6Class
 #' @import data.table
 #' @examples
@@ -221,7 +221,7 @@ Duplicates <- R6::R6Class(
       indexDuplicates <- which(similarities$v >= self$threshold)
       
       if (length(indexDuplicates) == 0L){
-        message("... no duplicates found")
+        if (verbose) cli_alert_info("no duplicates found")
         return(NULL)
       }
       
@@ -344,18 +344,22 @@ Duplicates <- R6::R6Class(
         weigh(method = "tfidf")
       
       if (self$n == 0){
-        if (verbose) cli_progress_step(paste("getting dates, using s-attribute", self$s_attribute))
+        if (verbose) cli_progress_step(
+          paste(
+            "split data into groups using s-attribute",
+            col_blue(self$s_attribute)
+          )
+        )
         dates <- lapply(x@objects, s_attributes, s_attribute = self$s_attribute)
-        
-        if (verbose) cli_progress_step(paste("create groups to compare", self$s_attribute))
         groups <- split(x = names(dates), f = as.factor(unname(unlist(dates))))
         # drop groups with only one id (nothing to compare)
         for (i in rev(unname(which(sapply(groups, length) <= 1L))))
           groups[[i]] <- NULL
+        if (verbose) cli_progress_done()
         
-        if (verbose) cli_progress_step("compute similarities")
         .get_similarities <- function(groupname){
-          if (verbose) cli_progress_step("compute similarities for: ", groupname)
+          if (isTRUE(verbose) && isFALSE(mc))
+            cli_progress_step(paste("compute similarities for:", col_blue(groupname)))
           ids <- groups[[groupname]]
           m <- as.matrix(ngram_matrix[,ids])
           empty_rows <- unname(which(rowSums(m) == 0L))
@@ -366,11 +370,14 @@ Duplicates <- R6::R6Class(
           if (length(a_is_b) > 0L) dt <- dt[-a_is_b]
           dt[value >= self$threshold]
         }
+        
         if (progress){
           dts <- pblapply(names(groups), .get_similarities, cl = mc)
         } else {
           if (mc){
+            if (verbose) cli_progress_step("compute similarities")
             dts <- mclapply(names(groups), .get_similarities, mc.cores = mc)
+            if (verbose) cli_progress_done()
           } else {
             dts <- lapply(names(groups), .get_similarities)
           }
@@ -406,18 +413,34 @@ Duplicates <- R6::R6Class(
       }
       
       if (verbose) cli_progress_step("preparing data.table")
-      newDuplicateDT <- self$similarities_matrix_to_dt(
+      duplicates_dt <- self$similarities_matrix_to_dt(
         x = x,
         similarities = similarities,
         mc = mc,
-        verbose = verbose,
-        progress = TRUE
+        progress = TRUE,
+        verbose = FALSE
       )
+      if (verbose) cli_progress_done()
+      
+      if (isTRUE(verbose)){
+        if (is.null(duplicates_dt)){
+          cli_alert_info("no duplicates detected")
+        } else {
+          cli_alert_info(
+            paste(
+              "number of duplicates detected:",
+              col_blue(nrow(duplicates_dt))
+            )
+          )
+        }
+      }
+      
       if (is.null(self$duplicates)){
-        self$duplicates <- newDuplicateDT
+        self$duplicates <- duplicates_dt
       } else {
-        if (verbose) message("... data.table with duplicates alread present, appending new results")
-        self$duplicates <- rbind(self$duplicates, newDuplicateDT)
+        if (verbose)
+          cli_alert_info("appending results to existing table with duplicates")
+        self$duplicates <- rbind(self$duplicates, duplicates_dt)
       }
       invisible(self$duplicates)
     },
@@ -474,42 +497,27 @@ Duplicates <- R6::R6Class(
     #' @description´
     #' Add structural attributes to CWB corpus based on the annotation data that
     #' has been generated (data.table in field annotation).
-    #' @param exec A `logical` value, whether to execute system command.
-    #' @param filenames List of filenames.
-    encode = function(exec = FALSE, filenames = list(duplicate = tempfile(), original = tempfile())){
+    #' @param s_attr_article The document-level s-attribute.
+    #' @importFrom data.table setDT
+    #' @importFrom RcppCWB s_attribute_decode
+    encode = function(s_attr_article){
+      s_attr_proto <- s_attribute_decode(
+        corpus = self$corpus,
+        s_attribute = s_attr_article,
+        data_dir = self$data_dir,
+        registry = self$registry,
+        encoding = self$encoding,
+        method = "Rcpp"
+      )
+      setDT(s_attr_proto)
+      setnames(s_attr_proto, old = "value", new = "duplicate_name")
       
-      # helper function 
-      .as_cwb_encode_infile <- function(x, cols){
-        M <- as.matrix(
-          data.frame(
-            lapply(
-              setNames(cols, cols),
-              function(col) as.character(x[[col]]))
-          )
-        )
-        paste(paste(apply(M, 1, function(row) paste(row, collapse = "\t")), collapse = "\n", sep = ""), "\n", sep = "")
-      }
+      foo <- self$duplicates[s_attr_proto, on = "duplicate_name"]
+      setnames(foo, old = c("duplicate_name", "name"), new = c(s_attr_article, "duplicate_of"))
+      foo[, list(duplicate_of = paste(.SD[["duplicate_of"]], collapse = "|")), on = c("article_id", "cpos_left", "cpos_right")]
       
-      .makeEncodeCmd <- function(filename, attribute){
-        paste(
-          c(
-            "cwb-s-encode", "-d", parseRegistry(corpus)[["HOME"]],
-            "-f", filename, "-V", attribute
-          ),
-          collapse = " ")
-      }
+      foo <- s_attr_proto[self$duplicates, on = "duplicate_name"]
       
-      for (what in c("duplicate", "original")){
-        content <- .as_cwb_encode_infile(self$annotation, cols = c("cpos_left", "cpos_right", what))  
-        cat(content, file = filenames[[what]])
-        encodeCmd <- .makeEncodeCmd(
-          filenames[[what]],
-          attribute = paste(strsplit(self$s_attribute, "_")[[1]][1], what, sep="_")
-        )
-        cat(encodeCmd)
-        cat("\n")
-        if (exec) system(encodeCmd)
-      }
     }
   )
 )

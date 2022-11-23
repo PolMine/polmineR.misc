@@ -1,4 +1,4 @@
-## v0.2.1.9001
+## v0.2.1.9002
 
 * Unused arguments `mc` and `progress` removed from `nchars()` method for `corpus` 
 to avoid illussion they could make a difference.
@@ -8,6 +8,8 @@ to avoid illussion they could make a difference.
 * Progress messages of `Duplicates` method polished.
 * `Duplicates$detect()` reports number of duplicates detected if `verbose` is
 `TRUE`.
+* `Duplicates$detect()` reports overall time required for duplicate detection
+job.
 
 ## v0.2.1
 

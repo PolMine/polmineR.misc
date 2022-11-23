@@ -120,14 +120,14 @@ Duplicates <- R6::R6Class(
     #' @field duplicates A `data.table` with documents considered as duplicates.
     duplicates = NULL,
     
-    #' @field similarities a \code{simple_triplet_matrix} with similarities of texts
-    similarities = "simple_triplet_matrix",
+    #' @field similarities A `simple_triplet_matrix` with similarities of texts
+    similarities = NULL,
     
     #' @field date_preprocessor function to rework dates if not in the DD-MM-YYYY standard format
     date_preprocessor = "function",
     
-    #' @field annotation a \code{data.table} with corpus positions.
-    annotation = "data.table",
+    #' @field annotation A `data.table` with corpus positions and annotation data.
+    annotation = NULL,
     
     #' @description 
     #' Initialize object of class `Duplicates`.
@@ -164,7 +164,10 @@ Duplicates <- R6::R6Class(
       }
       
       if (verbose) cli_progress_step("getting docs to be compared")
-      dates <- unlist(lapply(setNames(x@objects, names(x)), function(y) s_attributes(y, self$s_attribute)))
+      dates <- unlist(lapply(
+        setNames(x@objects, names(x)),
+        function(y) s_attributes(y, self$s_attribute)
+      ))
       if (!is.null(self$date_preprocessor)) dates <- sapply(dates, self$date_preprocessor)
       objectSplittedByDate <- split(1L:length(x), f = dates)
       .get_comparisons <- function(i){
@@ -186,11 +189,18 @@ Duplicates <- R6::R6Class(
         datesToGet <- as.character(strftime(dateRange, format = "%Y-%m-%d"))
         unlist(lapply(datesToGet, function(y) objectSplittedByDate[[y]]))
       }
-      docsToCompare <- pblapply(1:length(x), FUN = .get_comparisons, cl = getOption("polmineR.cores"))
+      
+      docsToCompare <- pblapply(
+        1L:length(x),
+        FUN = .get_comparisons, cl = getOption("polmineR.cores")
+      )
       
       docsToCompareMatrix <- simple_triplet_matrix(
         i = unlist(docsToCompare),
-        j = unlist(lapply(1:length(docsToCompare), function(i) rep(i, times = length(docsToCompare[[i]])))),
+        j = unlist(lapply(
+          1L:length(docsToCompare),
+          function(i) rep(i, times = length(docsToCompare[[i]]))
+        )),
         v = rep(NA, times = length(unlist(docsToCompare))),
         ncol = length(x),
         nrow = length(x),
@@ -205,8 +215,8 @@ Duplicates <- R6::R6Class(
     },
     
     #' @description
-    #' Turn similarities of documents into a data.table that identifies original
-    #' document and duplicate.
+    #' Turn similarities of documents into a `data.table` that identifies
+    #' original document and duplicate.
     #' @param similarities A `TermDocumentMatrix` with cosine similarities.
     similarities_matrix_to_dt = function(x, similarities, mc = FALSE, progress = TRUE, verbose = TRUE){
       
@@ -318,6 +328,8 @@ Duplicates <- R6::R6Class(
       if (x@corpus != self$corpus){
         stop("The corpus ID configured in the Duplicates engine and of the bundle are not identical.")
       }
+      
+      started <- Sys.time()
 
       if (is.null(self$char_count)){
         if (verbose) cli_progress_step("counting characters")
@@ -442,6 +454,19 @@ Duplicates <- R6::R6Class(
           cli_alert_info("appending results to existing table with duplicates")
         self$duplicates <- rbind(self$duplicates, duplicates_dt)
       }
+      
+      if (verbose) cli_alert_info(
+        sprintf(
+          "total time for duplicate detection job: %s",
+          col_blue(
+            paste(
+              round(as.numeric(Sys.time() - started, units = "secs"), 2),
+              "s", sep = ""
+            )
+          )
+        )
+      )
+      
       invisible(self$duplicates)
     },
     
@@ -449,30 +474,35 @@ Duplicates <- R6::R6Class(
     #' Turn data.table with duplicates into file with corpus positions and
     #' annotation of duplicates, generate cwb-s-encode command and execute it,
     #' if wanted.
+    #' @importFrom data.table setDT setnames setkeyv
+    #' @importFrom polmineR corpus
     annotate = function(s_attribute){
       
-      sAttr <- s_attributes(self$corpus, s_attribute, unique = FALSE)
+      x <- corpus(self$corpus)
       
-      cposMatrix <- RcppCWB::get_region_matrix(
-        corpus = self$corpus,
-        s_attribute = s_attribute,
-        struc = 0L:(length(sAttr) - 1L)
+      regions <- setDT(
+        RcppCWB::s_attribute_decode(
+          corpus = x$corpus,
+          data_dir = x@data_dir,
+          s_attribute = s_attribute,
+          encoding = x@encoding,
+          registry = x@registry_dir,
+          method = "Rcpp"
+        )
       )
-      colnames(cposMatrix) <- c("cpos_left", "cpos_right")
+      setnames(regions, old = "values", new = s_attribute)
+      setkeyv(regions, s_attribute)
       
-      cposDT <- data.table(cposMatrix)
-      cposDT[, s_attribute := sAttr]
-      setnames(cposDT, old = "s_attribute", new = s_attribute)
-      setkeyv(cposDT, s_attribute)
-      
-      duplicates_df <- as.data.frame(self$duplicates[, c("name", "duplicate_name"), with = FALSE])
-      G <- igraph::graph_from_data_frame(duplicates_df)
-      chunks <- igraph::decompose(G)
-      duplicateList <- lapply(
+      duplicates_df <- as.data.frame(
+        self$duplicates[, c("name", "duplicate_name"), with = FALSE]
+      )
+      graph <- igraph::graph_from_data_frame(duplicates_df)
+      chunks <- igraph::decompose(graph)
+      duplicate_li <- lapply(
         chunks,
         function(x){
           indegree <- igraph::degree(x, mode = "in")
-          original <- names(indegree)[which(indegree == 0)[1]]
+          original <- names(indegree)[which(indegree == 0L)[1]]
           duplicated <- names(indegree)[which(!names(indegree) %in% original)]
           list(
             original = rep(original, times = length(duplicated)),
@@ -480,18 +510,19 @@ Duplicates <- R6::R6Class(
           )
         }
       )
-      duplicatesDT <- data.table(
-        original = unlist(lapply(duplicateList, function(x) x$original)),
-        duplicate = unlist(lapply(duplicateList, function(x) x$duplicate))
+      duplicates_dt <- data.table(
+        original = unlist(lapply(duplicate_li, function(x) x$original)),
+        duplicate = unlist(lapply(duplicate_li, function(x) x$duplicate))
       )
-      setkeyv(duplicatesDT, "duplicate")
+      setkeyv(duplicates_dt, "duplicate")
       
-      self$annotation <- duplicatesDT[cposDT]
+      self$annotation <- duplicates_dt[regions]
       setnames(self$annotation, old = "duplicate", new = s_attribute)
       self$annotation[, "duplicate" := !is.na(self$annotation[["original"]])]
-      self$annotation[, "original" := sapply(self$annotation[["original"]], function(x) ifelse(is.na(x), "", x))]
+      self$annotation[, "original" := ifelse(is.na(self$annotation[["original"]]), "", self$annotation[["original"]])]
       setcolorder(self$annotation, c("cpos_left", "cpos_right", s_attribute, "duplicate", "original"))
       setorderv(self$annotation, cols = "cpos_left")
+      invisible(self$annotation)
     },
     
     #' @description´

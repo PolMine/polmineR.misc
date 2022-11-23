@@ -239,74 +239,28 @@ Duplicates <- R6::R6Class(
       for (what in c("i", "j", "v"))
         similarities[[what]] <- similarities[[what]][indexDuplicates]  
       
-      duplicateList <- lapply(
+      duplicates_li <- lapply(
         1L:length(similarities$i),
         function(i){
           i_name <- similarities$dimnames[[1]][similarities$i[i]]
           j_name <- similarities$dimnames[[1]] [similarities$j[i]]
-          i_date <- as.POSIXct(dates[[i_name]])
-          i_size <- x@objects[i_name][[1]]@size
-          j_date <- as.POSIXct(dates[[j_name]])
-          j_size <- x@objects[j_name][[1]]@size
-          value <- similarities$v[i]
-          if (i_date == j_date){
-            if (i_size >= j_size){
-              return(
-                c(
-                  name = i_name,
-                  date = as.character(i_date),
-                  size = i_size,
-                  duplicate_name = j_name,
-                  duplicate_date = as.character(j_date),
-                  duplicate_size = j_size,
-                  similarity=value
-                )
-              )
-            } else {
-              return(
-                c(
-                  name = j_name,
-                  date = as.character(j_date),
-                  size = j_size,
-                  duplicate_name = i_name,
-                  duplicate_date = as.character(i_date),
-                  duplicate_size = i_size,
-                  similarity = value
-                )
-              )
-            }
-          } else if (i_date < j_date){
-            return(
-              c(
-                name = i_name,
-                date = as.character(i_date),
-                size = i_size,
-                duplicate_name = j_name,
-                duplicate_date = as.character(j_date),
-                duplicate_size = j_size,
-                similarity = value
-              )
-            )
-          } else if (i_date > j_date){
-            return(
-              c(
-                name = j_name,
-                date = as.character(j_date),
-                size = j_size,
-                duplicate_name = i_name,
-                duplicate_date = as.character(i_date),
-                duplicate_size = i_size,
-                similarity = value
-              )
-            )
-          }
-        })
+          
+          data.frame(
+            name = i_name,
+            date = as.POSIXct(dates[[i_name]]),
+            size = x@objects[i_name][[1]]@size,
+            duplicate_name = j_name,
+            duplicate_date = as.POSIXct(dates[[j_name]]),
+            duplicate_size = x@objects[j_name][[1]]@size,
+            similarity = similarities$v[i]
+          )
+        }
+      )
       
-      duplicateDT <- data.table(do.call(rbind, duplicateList))
+      duplicateDT <- data.table(do.call(rbind, duplicates_li))
       count <- function(y) return(y)
       DT <- duplicateDT[, count(.N), by = .(name, date, size, duplicate_name, duplicate_date, duplicate_size, similarity)]
       DT[, V1 := NULL]
-      DT[, size := as.numeric(size)][, duplicate_size := as.numeric(duplicate_size)][, similarity := as.numeric(similarity)]
       DT
     },
     

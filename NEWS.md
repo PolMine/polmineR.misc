@@ -9,7 +9,9 @@ to avoid illussion they could make a difference.
 * `Duplicates$detect()` reports number of duplicates detected if `verbose` is
 `TRUE`.
 * `Duplicates$detect()` reports overall time required for duplicate detection
-job.
+job #13.
+* `Duplicates$similarities_matrix_to_dt()` does not implement a specific rule of
+choice between original and duplicate. This is left to graph analysis.
 
 ## v0.2.1
 

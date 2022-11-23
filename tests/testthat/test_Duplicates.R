@@ -23,8 +23,10 @@ test_that(
       D$detect(x = article_bundle, mc = 3L, progress = FALSE)
       
       testthat::expect_equal(
-        D$duplicates[["name"]], c("A9743732", "A9743756"),
-        D$duplicates[["duplicate_name"]], c("A9743755", "A9743733"),
+        D$duplicates[["name"]], c("A9743732", "A9743733")
+      )
+      testthat::expect_equal(
+        D$duplicates[["duplicate_name"]], c("A9743755", "A9743756"),
       )
     }
   }

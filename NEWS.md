@@ -12,6 +12,12 @@ to avoid illussion they could make a difference.
 job #13.
 * `Duplicates$similarities_matrix_to_dt()` does not implement a specific rule of
 choice between original and duplicate. This is left to graph analysis.
+* New method `Duplicates$make_duplicates_graph()` for turning duplicate data
+into graph for further analysis.
+* Method `Duplicates$annotate()` renamed as `Duplicates$make_annotation_data()`.
+* Method `Duplicates$similarities_matrix_to_dt()` removed (resolved into `$detect()`).
+* Method `Duplicates$get_duplicates_groups()` newly written.
+* Method `Duplicates$encode()` rewritten.
 
 ## v0.2.1
 

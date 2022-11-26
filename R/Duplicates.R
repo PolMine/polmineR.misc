@@ -214,56 +214,7 @@ Duplicates <- R6::R6Class(
       return( docsToCompareMatrix )
     },
     
-    #' @description
-    #' Turn similarities of documents into a `data.table` that identifies
-    #' original document and duplicate.
-    #' @param similarities A `TermDocumentMatrix` with cosine similarities.
-    similarities_matrix_to_dt = function(x, similarities, mc = FALSE, progress = TRUE, verbose = TRUE){
-      
-      if (mc == FALSE) mc <- 1L
-      
-      dates <- unlist(lapply(
-        setNames(x@objects, names(x)),
-        s_attributes,
-        s_attribute = self$s_attribute
-      ))
-      dates <- sapply(dates, self$date_preprocessor)
-      indexDuplicates <- which(similarities$v >= self$threshold)
-      
-      if (length(indexDuplicates) == 0L){
-        if (verbose) cli_alert_info("no duplicates found")
-        return(NULL)
-      }
-      
-      # keep only those values in similarity matrix that are above the threshold
-      for (what in c("i", "j", "v"))
-        similarities[[what]] <- similarities[[what]][indexDuplicates]  
-      
-      duplicates_li <- lapply(
-        1L:length(similarities$i),
-        function(i){
-          i_name <- similarities$dimnames[[1]][similarities$i[i]]
-          j_name <- similarities$dimnames[[1]] [similarities$j[i]]
-          
-          data.frame(
-            name = i_name,
-            date = as.POSIXct(dates[[i_name]]),
-            size = x@objects[i_name][[1]]@size,
-            duplicate_name = j_name,
-            duplicate_date = as.POSIXct(dates[[j_name]]),
-            duplicate_size = x@objects[j_name][[1]]@size,
-            similarity = similarities$v[i]
-          )
-        }
-      )
-      
-      duplicateDT <- data.table(do.call(rbind, duplicates_li))
-      count <- function(y) return(y)
-      DT <- duplicateDT[, count(.N), by = .(name, date, size, duplicate_name, duplicate_date, duplicate_size, similarity)]
-      DT[, V1 := NULL]
-      DT
-    },
-    
+
     #' @description
     #' Wrapper that implements the entire workflow for duplicate detection.
     #' @param x A `partition_bundle` or `subcorpus_bundle` object.
@@ -379,28 +330,42 @@ Duplicates <- R6::R6Class(
       }
       
       if (verbose) cli_progress_step("preparing data.table")
-      duplicates_dt <- self$similarities_matrix_to_dt(
-        x = x,
-        similarities = similarities,
-        mc = mc,
-        progress = TRUE,
-        verbose = FALSE
-      )
-      if (verbose) cli_progress_done()
+      index_duplicates <- which(similarities$v >= self$threshold)
       
-      if (isTRUE(verbose)){
-        if (is.null(duplicates_dt)){
-          cli_alert_info("no duplicates detected")
-        } else {
-          cli_alert_info(
-            paste(
-              "number of duplicates detected:",
-              col_blue(nrow(duplicates_dt))
+      if (length(index_duplicates) == 0L){
+        duplicates_dt <- NULL
+        if (verbose) cli_alert_info("no duplicates detected")
+      } else {
+        # keep only those values in similarity matrix that are above the threshold
+        for (what in c("i", "j", "v"))
+          similarities[[what]] <- similarities[[what]][index_duplicates]  
+        
+        duplicates_li <- lapply(
+          1L:length(similarities$i),
+          function(i){
+            i_name <- similarities$dimnames[[1]][similarities$i[i]]
+            j_name <- similarities$dimnames[[1]] [similarities$j[i]]
+            
+            data.frame(
+              name = i_name,
+              size = x@objects[i_name][[1]]@size,
+              duplicate_name = j_name,
+              duplicate_size = x@objects[j_name][[1]]@size,
+              similarity = similarities$v[i]
             )
+          }
+        )
+        
+        duplicates_dt <- unique(data.table(do.call(rbind, duplicates_li)))
+        cli_alert_info(
+          paste(
+            "number of duplicates detected:",
+            col_blue(nrow(duplicates_dt))
           )
-        }
+        )
       }
-      
+      if (verbose) cli_progress_done()
+
       if (is.null(self$duplicates)){
         self$duplicates <- duplicates_dt
       } else {
@@ -424,19 +389,70 @@ Duplicates <- R6::R6Class(
       invisible(self$duplicates)
     },
     
+    #' @description 
+    #' Prepare `data.table` with document ids, sizes, and group.
+    #' @importFrom igraph graph_from_data_frame decompose get.vertex.attribute
+    get_duplicates_groups = function(){
+      if (is.null(self$duplicates)) stop("field 'duplicates' is NULL")
+      
+      ids <- self$duplicates[, c("name", "duplicate_name")] |>
+        as.data.frame() |>
+        igraph::graph_from_data_frame() |>
+        decompose() |>
+        lapply(igraph::get.vertex.attribute, name = "name")
+      
+      dt <- data.table(
+        name = unlist(ids),
+        group = unlist(
+          mapply(rep, seq_along(ids), sapply(ids, length)),
+          recursive = FALSE
+        )
+      )
+      
+      sizes <- unique(rbindlist(
+        list(
+          self$duplicates[, c("name", "size")],
+          self$duplicates[, c("duplicate_name", "duplicate_size")]
+        ),
+        use.names = FALSE
+      ))
+      
+      sizes[dt, on = "name"]
+    },
+    
     #' @description
-    #' Turn data.table with duplicates into file with corpus positions and
-    #' annotation of duplicates, generate cwb-s-encode command and execute it,
-    #' if wanted.
+    #' Turn `data.table` with duplicates into file with corpus positions and
+    #' annotation of duplicates.
     #' @importFrom data.table setDT setnames setkeyv
     #' @importFrom polmineR corpus
-    annotate = function(s_attribute){
+    make_annotation_data = function(s_attribute, cols = c("size", "name"), order = c(1L, 1L)){
       
+      groups <- self$get_duplicates_groups()
+        
+      original <- groups[,
+        setorderv(x = .SD, cols = cols, order = order)[1,],
+        by = "group", .SDcols = cols
+      ][, "is_duplicate" := FALSE]
+      groups[original, "is_duplicate" := is_duplicate, on = "name"]
+      groups[, "is_duplicate" := ifelse(is.na(is_duplicate), TRUE, is_duplicate)]
+      duplicates_dt <- groups[,
+        list(
+          name = .SD[["name"]],
+          is_duplicate = .SD[["is_duplicate"]],
+          duplicates = sapply(
+            1L:nrow(.SD),
+            function(i) paste(setdiff(.SD[["name"]], .SD[["name"]][i]), collapse = "|")
+          )
+        ),
+        by = "group", .SDcols = c("name", "is_duplicate")
+      ][, "group" := NULL]
+      
+      # get regions ------------------------------------------------------------
+
       x <- corpus(self$corpus)
-      
       regions <- setDT(
         RcppCWB::s_attribute_decode(
-          corpus = x$corpus,
+          corpus = self$corpus,
           data_dir = x@data_dir,
           s_attribute = s_attribute,
           encoding = x@encoding,
@@ -444,37 +460,16 @@ Duplicates <- R6::R6Class(
           method = "Rcpp"
         )
       )
-      setnames(regions, old = "values", new = s_attribute)
+      setnames(regions, old = "value", new = s_attribute)
       setkeyv(regions, s_attribute)
       
-      duplicates_df <- as.data.frame(
-        self$duplicates[, c("name", "duplicate_name"), with = FALSE]
-      )
-      graph <- igraph::graph_from_data_frame(duplicates_df)
-      chunks <- igraph::decompose(graph)
-      duplicate_li <- lapply(
-        chunks,
-        function(x){
-          indegree <- igraph::degree(x, mode = "in")
-          original <- names(indegree)[which(indegree == 0L)[1]]
-          duplicated <- names(indegree)[which(!names(indegree) %in% original)]
-          list(
-            original = rep(original, times = length(duplicated)),
-            duplicate = duplicated
-          )
-        }
-      )
-      duplicates_dt <- data.table(
-        original = unlist(lapply(duplicate_li, function(x) x$original)),
-        duplicate = unlist(lapply(duplicate_li, function(x) x$duplicate))
-      )
-      setkeyv(duplicates_dt, "duplicate")
+      # finalize annotation data -----------------------------------------------
       
-      self$annotation <- duplicates_dt[regions]
-      setnames(self$annotation, old = "duplicate", new = s_attribute)
-      self$annotation[, "duplicate" := !is.na(self$annotation[["original"]])]
-      self$annotation[, "original" := ifelse(is.na(self$annotation[["original"]]), "", self$annotation[["original"]])]
-      setcolorder(self$annotation, c("cpos_left", "cpos_right", s_attribute, "duplicate", "original"))
+      setnames(duplicates_dt, old = "name", new = s_attribute)
+      self$annotation <- duplicates_dt[regions, on = s_attribute]
+      self$annotation[, "is_duplicate" := ifelse(is.na(self$annotation[["is_duplicate"]]), FALSE, self$annotation[["is_duplicate"]])]
+      self$annotation[, "duplicates" := ifelse(is.na(self$annotation[["duplicates"]]), "", self$annotation[["duplicates"]])]
+      setcolorder(self$annotation, c("cpos_left", "cpos_right", s_attribute, "is_duplicate", "duplicates"))
       setorderv(self$annotation, cols = "cpos_left")
       invisible(self$annotation)
     },
@@ -482,27 +477,26 @@ Duplicates <- R6::R6Class(
     #' @description´
     #' Add structural attributes to CWB corpus based on the annotation data that
     #' has been generated (data.table in field annotation).
-    #' @param s_attr_article The document-level s-attribute.
     #' @importFrom data.table setDT
-    #' @importFrom RcppCWB s_attribute_decode
-    encode = function(s_attr_article){
-      s_attr_proto <- s_attribute_decode(
-        corpus = self$corpus,
-        s_attribute = s_attr_article,
-        data_dir = self$data_dir,
-        registry = self$registry,
-        encoding = self$encoding,
-        method = "Rcpp"
-      )
-      setDT(s_attr_proto)
-      setnames(s_attr_proto, old = "value", new = "duplicate_name")
+    encode = function(){
       
-      foo <- self$duplicates[s_attr_proto, on = "duplicate_name"]
-      setnames(foo, old = c("duplicate_name", "name"), new = c(s_attr_article, "duplicate_of"))
-      foo[, list(duplicate_of = paste(.SD[["duplicate_of"]], collapse = "|")), on = c("article_id", "cpos_left", "cpos_right")]
+      x <- corpus(self$corpus)
       
-      foo <- s_attr_proto[self$duplicates, on = "duplicate_name"]
-      
+      for (s_attr in c("is_duplicate", "duplicates")){
+        s_attribute_encode(
+          values = self$annotation[[s_attr]],
+          data_dir = x@data_dir,
+          s_attribute = s_attr,
+          corpus = self$corpus,
+          region_matrix = as.matrix(self$annotation[, "cpos_left", "cpos_right"]),
+          method = "CWB",
+          registry_dir = x@registry_dir,
+          encoding = x@encoding,
+          delete = TRUE,
+          verbose = TRUE
+        )
+      }
+      invisible(TRUE)
     }
   )
 )

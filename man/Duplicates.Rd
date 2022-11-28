@@ -96,11 +96,11 @@ duplicates.}
 
 \item{\code{duplicates}}{A \code{data.table} with documents considered as duplicates.}
 
-\item{\code{similarities}}{a \code{simple_triplet_matrix} with similarities of texts}
+\item{\code{similarities}}{A \code{simple_triplet_matrix} with similarities of texts}
 
 \item{\code{date_preprocessor}}{function to rework dates if not in the DD-MM-YYYY standard format}
 
-\item{\code{annotation}}{a \code{data.table} with corpus positions.}
+\item{\code{annotation}}{A \code{data.table} with corpus positions and annotation data.}
 }
 \if{html}{\out{</div>}}
 }
@@ -109,9 +109,9 @@ duplicates.}
 \itemize{
 \item \href{#method-Duplicates-new}{\code{Duplicates$new()}}
 \item \href{#method-Duplicates-get_comparisons}{\code{Duplicates$get_comparisons()}}
-\item \href{#method-Duplicates-similarities_matrix_to_dt}{\code{Duplicates$similarities_matrix_to_dt()}}
 \item \href{#method-Duplicates-detect}{\code{Duplicates$detect()}}
-\item \href{#method-Duplicates-annotate}{\code{Duplicates$annotate()}}
+\item \href{#method-Duplicates-get_duplicates_groups}{\code{Duplicates$get_duplicates_groups()}}
+\item \href{#method-Duplicates-make_annotation_data}{\code{Duplicates$make_annotation_data()}}
 \item \href{#method-Duplicates-encode}{\code{Duplicates$encode()}}
 \item \href{#method-Duplicates-clone}{\code{Duplicates$clone()}}
 }
@@ -191,39 +191,6 @@ compared to detect duplicates}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Duplicates-similarities_matrix_to_dt"></a>}}
-\if{latex}{\out{\hypertarget{method-Duplicates-similarities_matrix_to_dt}{}}}
-\subsection{Method \code{similarities_matrix_to_dt()}}{
-Turn similarities of documents into a data.table that identifies original
-document and duplicate.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Duplicates$similarities_matrix_to_dt(
-  x,
-  similarities,
-  mc = FALSE,
-  progress = TRUE,
-  verbose = TRUE
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{x}}{a \code{partition_bundle} object defining the documents that will be
-compared to detect duplicates}
-
-\item{\code{similarities}}{A \code{TermDocumentMatrix} with cosine similarities.}
-
-\item{\code{mc}}{logical, whether to use multicore}
-
-\item{\code{progress}}{logical, whether to show progress bar}
-
-\item{\code{verbose}}{logical, whether to be verbose}
-}
-\if{html}{\out{</div>}}
-}
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Duplicates-detect"></a>}}
 \if{latex}{\out{\hypertarget{method-Duplicates-detect}{}}}
 \subsection{Method \code{detect()}}{
@@ -269,14 +236,27 @@ The updated content of slot \verb{$duplicates} is returned invisibly.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Duplicates-annotate"></a>}}
-\if{latex}{\out{\hypertarget{method-Duplicates-annotate}{}}}
-\subsection{Method \code{annotate()}}{
-Turn data.table with duplicates into file with corpus positions and
-annotation of duplicates, generate cwb-s-encode command and execute it,
-if wanted.
+\if{html}{\out{<a id="method-Duplicates-get_duplicates_groups"></a>}}
+\if{latex}{\out{\hypertarget{method-Duplicates-get_duplicates_groups}{}}}
+\subsection{Method \code{get_duplicates_groups()}}{
+Prepare \code{data.table} with document ids, sizes, and group.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Duplicates$annotate(s_attribute)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Duplicates$get_duplicates_groups()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Duplicates-make_annotation_data"></a>}}
+\if{latex}{\out{\hypertarget{method-Duplicates-make_annotation_data}{}}}
+\subsection{Method \code{make_annotation_data()}}{
+Turn \code{data.table} with duplicates into file with corpus positions and
+annotation of duplicates.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Duplicates$make_annotation_data(
+  s_attribute,
+  cols = c("size", "name"),
+  order = c(1L, 1L)
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -295,21 +275,9 @@ if wanted.
 Add structural attributes to CWB corpus based on the annotation data that
 has been generated (data.table in field annotation).
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Duplicates$encode(
-  exec = FALSE,
-  filenames = list(duplicate = tempfile(), original = tempfile())
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Duplicates$encode()}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{exec}}{A \code{logical} value, whether to execute system command.}
-
-\item{\code{filenames}}{List of filenames.}
-}
-\if{html}{\out{</div>}}
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Duplicates-clone"></a>}}

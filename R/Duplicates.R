@@ -398,7 +398,7 @@ Duplicates <- R6::R6Class(
       ids <- self$duplicates[, c("name", "duplicate_name")] |>
         as.data.frame() |>
         igraph::graph_from_data_frame() |>
-        decompose() |>
+        igraph::decompose() |>
         lapply(igraph::get.vertex.attribute, name = "name")
       
       dt <- data.table(
@@ -474,22 +474,23 @@ Duplicates <- R6::R6Class(
       invisible(self$annotation)
     },
     
-    #' @description´
+    #' @description
     #' Add structural attributes to CWB corpus based on the annotation data that
     #' has been generated (data.table in field annotation).
     #' @importFrom data.table setDT
-    encode = function(){
+    #' @importFrom cwbtools s_attribute_encode
+    encode = function(method = "R"){
       
       x <- corpus(self$corpus)
       
       for (s_attr in c("is_duplicate", "duplicates")){
         s_attribute_encode(
-          values = self$annotation[[s_attr]],
+          values = as.character(self$annotation[[s_attr]]),
           data_dir = x@data_dir,
           s_attribute = s_attr,
           corpus = self$corpus,
-          region_matrix = as.matrix(self$annotation[, "cpos_left", "cpos_right"]),
-          method = "CWB",
+          region_matrix = as.matrix(self$annotation[, c("cpos_left", "cpos_right")]),
+          method = method,
           registry_dir = x@registry_dir,
           encoding = x@encoding,
           delete = TRUE,

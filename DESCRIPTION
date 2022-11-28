@@ -19,7 +19,9 @@ Imports:
     methods,
     RcppCWB,
     cli,
-    stringi
+    stringi,
+    igraph,
+    cwbtools
 Suggests:
     testthat
 Description: Miscellaneaous extensions for the polmineR base package.

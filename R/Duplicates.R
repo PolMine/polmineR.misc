@@ -226,9 +226,12 @@ Duplicates <- R6::R6Class(
     #'   line with Kliche et al. 2014: 695.
     #' @param how Implementation used to compute similarities - passed into 
     #'   `cosine_similarity()`.
+    #' @param min_shingle_length An `integer` value with minimum length of
+    #'   shingles that enter calculation of document similarity. Defaults to
+    #'   `n`.
     #' @return The updated content of slot `$duplicates` is returned invisibly.
     #' @importFrom cli cli_alert_info col_blue
-    detect = function(x, n = 5L, character_selection = 1:12, how = "coop", verbose = TRUE, mc = FALSE, progress = TRUE){
+    detect = function(x, n = 5L, character_selection = 1:12, min_shingle_length = n, how = "coop", verbose = TRUE, mc = FALSE, progress = TRUE){
       
       if (x@corpus != self$corpus){
         stop("The corpus ID configured in the Duplicates engine and of the bundle are not identical.")
@@ -254,7 +257,11 @@ Duplicates <- R6::R6Class(
       )
       
       if (verbose) cli_progress_step("get data for ngram matrix")
-      ngram_bundle <- ngrams(x, n = n, char = names(self$char_count[character_selection]), mc = mc, progress = progress)
+      ngram_bundle <- ngrams(
+        x,
+        n = n, char = names(self$char_count[character_selection]),
+        mc = mc, progress = progress
+      )
       
       if (verbose) cli_progress_step("assemble ngram matrix")
       ngram_matrix <- as.TermDocumentMatrix(ngram_bundle, col = "count", verbose = FALSE) |>
@@ -275,12 +282,29 @@ Duplicates <- R6::R6Class(
         if (verbose) cli_progress_done()
         
         .get_similarities <- function(groupname){
-          if (isTRUE(verbose) && isFALSE(mc))
-            cli_progress_step(paste("compute similarities for:", col_blue(groupname)))
+          if (isTRUE(verbose) && isFALSE(mc)){
+            cli_progress_step(
+              paste("compute similarities for:", col_blue(groupname))
+            )
+          }
           ids <- groups[[groupname]]
-          m <- as.matrix(ngram_matrix[,ids])
+          
+          m <- as.matrix(ngram_matrix[,ids]) # slow!
+          
+          # Drop ngrams that are not present in this subset of the larger matrix
           empty_rows <- unname(which(rowSums(m) == 0L))
           if (length(empty_rows) > 0L) m <- m[-empty_rows,]
+          
+          # Very short documents may result in shingle lengths below n, and this
+          # may result in an undesired complete similarity. So drop short 
+          # shingles and purge matrix.
+          short_shingles <- which(nchar(rownames(m)) < min_shingle_length)
+          if (length(short_shingles) > 0L){
+            m <- m[-short_shingles,]
+            empty_docs <- which(colSums(m) == 0)
+            if (length(empty_docs) > 0L) m <- m[,-empty_docs]
+          }
+          
           sim <- cosine_similarity(x = t(m), how = how)
           dt <- data.table(reshape2::melt(as.matrix(sim)))
           a_is_b <- which(ifelse(dt[["Var1"]] == dt[["Var2"]], TRUE, FALSE))
@@ -423,11 +447,20 @@ Duplicates <- R6::R6Class(
     #' @description
     #' Turn `data.table` with duplicates into file with corpus positions and
     #' annotation of duplicates.
+    #' @param drop A character vector of document IDs that will be removed from
+    #'   the annotation data. Useful for removing known noise that will be 
+    #'   excluded from the analysis otherwise.
     #' @importFrom data.table setDT setnames setkeyv
     #' @importFrom polmineR corpus
-    make_annotation_data = function(s_attribute, cols = c("size", "name"), order = c(1L, 1L)){
+    make_annotation_data = function(s_attribute, drop = NULL, cols = c("size", "name"), order = c(1L, 1L)){
       
       groups <- self$get_duplicates_groups()
+      
+      if (!is.null(drop)){
+        groups <- groups[!groups[["name"]] %in% drop]
+        groups[groups[, .N, by = "group"], "group_size" := N, on = "group"]
+        groups <- groups[group_size > 1L][, "group_size" := NULL]
+      }
         
       original <- groups[,
         setorderv(x = .SD, cols = cols, order = order)[1,],
@@ -467,9 +500,23 @@ Duplicates <- R6::R6Class(
       
       setnames(duplicates_dt, old = "name", new = s_attribute)
       self$annotation <- duplicates_dt[regions, on = s_attribute]
-      self$annotation[, "is_duplicate" := ifelse(is.na(self$annotation[["is_duplicate"]]), FALSE, self$annotation[["is_duplicate"]])]
-      self$annotation[, "duplicates" := ifelse(is.na(self$annotation[["duplicates"]]), "", self$annotation[["duplicates"]])]
-      setcolorder(self$annotation, c("cpos_left", "cpos_right", s_attribute, "is_duplicate", "duplicates"))
+      self$annotation[,
+        "is_duplicate" := ifelse(
+          is.na(self$annotation[["is_duplicate"]]),
+          FALSE,
+          self$annotation[["is_duplicate"]]
+        )
+      ]
+      self$annotation[,
+        "duplicates" := ifelse(
+          is.na(self$annotation[["duplicates"]]),
+          "",
+          self$annotation[["duplicates"]]
+      )]
+      setcolorder(
+        self$annotation,
+        c("cpos_left", "cpos_right", s_attribute, "is_duplicate", "duplicates")
+      )
       setorderv(self$annotation, cols = "cpos_left")
       invisible(self$annotation)
     },

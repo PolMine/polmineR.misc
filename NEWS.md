@@ -16,8 +16,13 @@ choice between original and duplicate. This is left to graph analysis.
 into graph for further analysis.
 * Method `Duplicates$annotate()` renamed as `Duplicates$make_annotation_data()`.
 * Method `Duplicates$similarities_matrix_to_dt()` removed (resolved into `$detect()`).
-* Method `Duplicates$get_duplicates_groups()` newly written.
+* Method `Duplicates$get_duplicates_groups()` newly written #14.
 * Method `Duplicates$encode()` rewritten.
+* Method `Duplicates$detect()` now has argument `min_shingle_length` to limit
+similarity calculation to those substantive shingles: Short documents may yield
+shingles of length below n and document similarities without substance. #12
+* Method `Duplicates$make_annotation_data()` now has argument `drop` to exclude
+known documents with issues from annotation.
 
 ## v0.2.1
 

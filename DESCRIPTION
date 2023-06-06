@@ -2,7 +2,7 @@ Package: polmineR.misc
 Type: Package
 Title: polmineR.misc
 Version: 0.2.1.9003
-Date: 2022-11-28
+Date: 2023-01-29
 Author: Andreas Blaette
 Maintainer: Andreas Blaette <andreas.blaette@uni-due.de>
 Imports:
@@ -34,7 +34,6 @@ Collate:
     'SentenceSimilarity.R'
     'Word2Vec.R'
     'as.dfm_method.R'
-    'as.svmlight_method.R'
     'as.tibble_method.R'
     'binarize_method.R'
     'bughunt_method.R'
